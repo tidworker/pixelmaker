@@ -11,7 +11,7 @@
             align-items: center;
             margin: 0;
             padding: 20px;
-            background-color: #000;
+            background-color: #272727;
         }
         #canvas {
             display: grid;
@@ -33,15 +33,15 @@
             margin-top: 10px;
         }
         .color {
-            width: 20px;
-            height: 20px;
+            width: 32px;
+            height: 32px;
             margin: 2px;
             cursor: pointer;
             border: 1px solid #000;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            font-size: 14px;
             color: #fff;
         }
         .selected {
@@ -83,25 +83,26 @@
     
     <script>
         const colorMapping = {
-            '0,0,0': 'a',
-            '127,127,127': 'b',
-            '136,0,21': 'c',
-            '237,28,36': 'd',
-            '255,127,39': 'e',
-            '255,242,0': 'f',
-            '34,177,76': 'g',
-            '0,162,232': 'h',
-            '63,72,204': 'i',
-            '163,73,164': 'j',
-            '195,195,195': 'j',
-            '185,122,87': 'k',
-            '255,174,201': 'l',
-            '255,201,14': 'm',
-            '239,228,176': 'n',
-            '181,230,29': 'o',
-            '153,217,234': 'p',
-            '112,146,190': 'r',
-            '200,191,231': 's'
+            '0,0,0': '1',
+            '127,127,127': '2',
+            '136,0,21': '3',
+            '237,28,36': '4',
+            '255,127,39': '5',
+            '255,242,0': '6',
+            '34,177,76': '7',
+            '0,162,232': '8',
+            '63,72,204': '9',
+            '163,73,164': '10',
+            '195,195,195': '11',
+            '185,122,87': '12',
+            '255,174,201': '13',
+            '255,201,14': '14',
+            '239,228,176': '15',
+            '181,230,29': '16',
+            '153,217,234': '17',
+            '112,146,190': '18',
+            '200,191,231': '19',
+            '240,135,132': '20'
         };
 
         const colors = Object.keys(colorMapping);
@@ -126,7 +127,7 @@
             isMouseDown = true;
             const touch = e.touches[0];
             const element = document.elementFromPoint(touch.clientX, touch.clientY);
-            if (element && element.classList.contains('pixel')) {
+            if (element && element.classList.contains('pixel') && element.style.backgroundColor !== 'rgb(255, 255, 255)') {
                 if (currentTool === 'pencil') {
                     history.push(canvas.innerHTML); // Save state for undo
                     element.style.backgroundColor = `rgb(${currentColor})`;
@@ -141,7 +142,7 @@
             if (isMouseDown) {
                 const touch = e.touches[0];
                 const element = document.elementFromPoint(touch.clientX, touch.clientY);
-                if (element && element.classList.contains('pixel')) {
+                if (element && element.classList.contains('pixel') && element.style.backgroundColor !== 'rgb(255, 255, 255)') {
                     if (currentTool === 'pencil') {
                         element.style.backgroundColor = `rgb(${currentColor})`;
                     }
@@ -153,17 +154,18 @@
         for (let i = 0; i < 10000; i++) {
             const pixel = document.createElement('div');
             pixel.classList.add('pixel');
+            pixel.style.backgroundColor = 'rgb(255, 255, 255)'; // Initial color is white
             pixel.addEventListener('mousedown', () => {
-                if (currentTool === 'pencil') {
+                if (currentTool === 'pencil' && pixel.style.backgroundColor !== 'rgb(255, 255, 255)') {
                     history.push(canvas.innerHTML); // Save state for undo
                     pixel.style.backgroundColor = `rgb(${currentColor})`;
-                } else if (currentTool === 'paintBucket') {
+                } else if (currentTool === 'paintBucket' && pixel.style.backgroundColor !== 'rgb(255, 255, 255)') {
                     history.push(canvas.innerHTML); // Save state for undo
                     fill(pixel, currentColor);
                 }
             });
             pixel.addEventListener('mouseover', () => {
-                if (currentTool === 'pencil' && isMouseDown) {
+                if (currentTool === 'pencil' && isMouseDown && pixel.style.backgroundColor !== 'rgb(255, 255, 255)') {
                     pixel.style.backgroundColor = `rgb(${currentColor})`;
                 }
             });
@@ -216,17 +218,17 @@
         }
 
         function pixelMouseDownHandler() {
-            if (currentTool === 'pencil') {
+            if (currentTool === 'pencil' && this.style.backgroundColor !== 'rgb(255, 255, 255)') {
                 history.push(canvas.innerHTML); // Save state for undo
                 this.style.backgroundColor = `rgb(${currentColor})`;
-            } else if (currentTool === 'paintBucket') {
+            } else if (currentTool === 'paintBucket' && this.style.backgroundColor !== 'rgb(255, 255, 255)') {
                 history.push(canvas.innerHTML); // Save state for undo
                 fill(this, currentColor);
             }
         }
 
         function pixelMouseOverHandler() {
-            if (currentTool === 'pencil' && isMouseDown) {
+            if (currentTool === 'pencil' && isMouseDown && this.style.backgroundColor !== 'rgb(255, 255, 255)') {
                 this.style.backgroundColor = `rgb(${currentColor})`;
             }
         }
@@ -242,7 +244,7 @@
 
             while (pixelsToCheck.length > 0) {
                 const pixel = pixelsToCheck.pop();
-                if (pixel.style.backgroundColor === targetColor) {
+                if (pixel.style.backgroundColor === targetColor && targetColor !== 'rgb(255, 255, 255)') {
                     pixel.style.backgroundColor = fillColorRGB;
                     const pixelIndex = canvasChildren.indexOf(pixel);
                     const neighbors = getNeighbors(pixelIndex);
