@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>點陣圖編輯器</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        #canvas {
+            display: grid;
+            grid-template-columns: repeat(100, 8px);
+            grid-template-rows: repeat(100, 8px);
+            margin-bottom: 10px;
+        }
+        .pixel {
+            width: 8px;
+            height: 8px;
+            box-sizing: border-box;
+        }
+        #colorPalette {
+            display: flex;
+            flex-wrap: wrap;
+            max-width: 800px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .color {
+            width: 20px;
+            height: 20px;
+            margin: 2px;
+            cursor: pointer;
+            border: 1px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #fff;
+        }
+        .selected {
+            border: 2px solid #000;
+        }
+        #fileInput {
+            margin-top: 10px;
+        }
+        #tools {
+            margin-top: 10px;
+        }
+        .tool {
+            margin: 5px;
+            cursor: pointer;
+            padding: 5px 10px;
+            border: 1px solid #000;
+            background-color: #fff;
+        }
+        .active-tool {
+            background-color: #000;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas"></div>
+    <div id="colorPalette"></div>
+    <input type="file" id="fileInput" accept="image/*">
+    <div id="tools">
+        <button id="pencil" class="tool active-tool">鉛筆</button>
+        <button id="paintBucket" class="tool">油漆桶</button>
+        <button id="undo" class="tool">上一步</button>
+        <button id="save" class="tool">存檔</button>
+    </div>
+    
+    <script>
+        const colorMapping = {
+            '0,0,0': 'a',
+            '127,127,127': 'b',
+            '136,0,21': 'c',
+            '237,28,36': 'd',
+            '255,127,39': 'e',
+            '255,242,0': 'f',
+            '34,177,76': 'g',
+            '0,162,232': 'h',
+            '63,72,204': 'i',
+            '163,73,164': 'j',
+            '195,195,195': 'j',
+            '185,122,87': 'k',
+            '255,174,201': 'l',
+            '255,201,14': 'm',
+            '239,228,176': 'n',
+            '181,230,29': 'o',
+            '153,217,234': 'p',
+            '112,146,190': 'r',
+            '200,191,231': 's'
+        };
+
+        const colors = Object.keys(colorMapping);
+        let currentColor = colors[0];
+        let currentTool = 'pencil'; // Default tool
+        let history = []; // For undo functionality
+
+        const canvas = document.getElementById('canvas');
+        const colorPalette = document.getElementById('colorPalette');
+        const pencilButton = document.getElementById('pencil');
+        const paintBucketButton = document.getElementById('paintBucket');
+        const undoButton = document.getElementById('undo');
+        const saveButton = document.getElementById('save');
+
+        // Create canvas
+        let isMouseDown = false;
+        canvas.addEventListener('mousedown', () => isMouseDown = true);
+        canvas.addEventListener('mouseup', () => isMouseDown = false);
+        canvas.addEventListener('mouseleave', () => isMouseDown = false);
+
+        for (let i = 0; i < 10000; i++) {
+            const pixel = document.createElement('div');
+            pixel.classList.add('pixel');
+            pixel.addEventListener('mousedown', () => {
+                if (currentTool === 'pencil') {
+                    history.push(canvas.innerHTML); // Save state for undo
+                    pixel.style.backgroundColor = `rgb(${currentColor})`;
+                } else if (currentTool === 'paintBucket') {
+                    history.push(canvas.innerHTML); // Save state for undo
+                    fill(pixel, currentColor);
+                }
+            });
+            pixel.addEventListener('mouseover', () => {
+                if (currentTool === 'pencil' && isMouseDown) {
+                    history.push(canvas.innerHTML); // Save state for undo
+                    pixel.style.backgroundColor = `rgb(${currentColor})`;
+                }
+            });
+            canvas.appendChild(pixel);
+        }
+
+        // Create color palette
+        colors.forEach((color, index) => {
+            const colorBox = document.createElement('div');
+            colorBox.classList.add('color');
+            if (color === currentColor) colorBox.classList.add('selected');
+            colorBox.style.backgroundColor = `rgb(${color})`;
+            colorBox.innerText = colorMapping[color];
+            colorBox.addEventListener('click', () => {
+                document.querySelectorAll('.color').forEach(c => c.classList.remove('selected'));
+                colorBox.classList.add('selected');
+                currentColor = color;
+            });
+            colorPalette.appendChild(colorBox);
+        });
+
+        // Tool selection
+        pencilButton.addEventListener('click', () => {
+            currentTool = 'pencil';
+            setActiveTool(pencilButton);
+        });
+
+        paintBucketButton.addEventListener('click', () => {
+            currentTool = 'paintBucket';
+            setActiveTool(paintBucketButton);
+        });
+
+        undoButton.addEventListener('click', () => {
+            if (history.length > 0) {
+                canvas.innerHTML = history.pop();
+                // Reattach event listeners to pixels
+                const pixels = canvas.getElementsByClassName('pixel');
+                for (let i = 0; i < pixels.length; i++) {
+                    pixels[i].addEventListener('mousedown', pixelMouseDownHandler);
+                    pixels[i].addEventListener('mouseover', pixelMouseOverHandler);
+                }
+            }
+        });
+
+        saveButton.addEventListener('click', saveAsBMP);
+
+        function setActiveTool(button) {
+            document.querySelectorAll('.tool').forEach(tool => tool.classList.remove('active-tool'));
+            button.classList.add('active-tool');
+        }
+
+        function pixelMouseDownHandler() {
+            if (currentTool === 'pencil') {
+                history.push(canvas.innerHTML); // Save state for undo
+                this.style.backgroundColor = `rgb(${currentColor})`;
+            } else if (currentTool === 'paintBucket') {
+                history.push(canvas.innerHTML); // Save state for undo
+                fill(this, currentColor);
+            }
+        }
+
+        function pixelMouseOverHandler() {
+            if (currentTool === 'pencil' && isMouseDown) {
+                history.push(canvas.innerHTML); // Save state for undo
+                this.style.backgroundColor = `rgb(${currentColor})`;
+            }
+        }
+
+        // Fill function for paint bucket
+        function fill(startPixel, fillColor) {
+            const targetColor = startPixel.style.backgroundColor;
+            const fillColorRGB = `rgb(${fillColor})`;
+            if (targetColor === fillColorRGB) return;
+
+            const pixelsToCheck = [startPixel];
+            const canvasChildren = Array.from(canvas.children);
+
+            while (pixelsToCheck.length > 0) {
+                const pixel = pixelsToCheck.pop();
+                if (pixel.style.backgroundColor === targetColor) {
+                    pixel.style.backgroundColor = fillColorRGB;
+                    const pixelIndex = canvasChildren.indexOf(pixel);
+                    const neighbors = getNeighbors(pixelIndex);
+                    neighbors.forEach(neighbor => {
+                        if (canvasChildren[neighbor] && canvasChildren[neighbor].style.backgroundColor === targetColor) {
+                            pixelsToCheck.push(canvasChildren[neighbor]);
+                        }
+                    });
+                }
+            }
+        }
+
+        // Get neighboring pixels
+        function getNeighbors(index) {
+            const neighbors = [];
+            const row = Math.floor(index / 100);
+            const col = index % 100;
+            if (row > 0) neighbors.push(index - 100); // Top
+            if (row < 99) neighbors.push(index + 100); // Bottom
+            if (col > 0) neighbors.push(index - 1); // Left
+            if (col < 99) neighbors.push(index + 1); // Right
+            return neighbors;
+        }
+
+        // Save as BMP
+        function saveAsBMP() {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 100;
+            tempCanvas.height = 100;
+            const ctx = tempCanvas.getContext('2d');
+
+            const pixels = canvas.getElementsByClassName('pixel');
+            for (let i = 0; i < pixels.length; i++) {
+                const pixel = pixels[i];
+                const color = pixel.style.backgroundColor;
+                const rgb = color.match(/\d+/g);
+                ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+                ctx.fillRect((i % 100), Math.floor(i / 100), 1, 1);
+            }
+
+            tempCanvas.toBlob(function(blob) {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'canvas.bmp';
+                link.click();
+            }, 'image/bmp');
+        }
+
+        // Import image for editing
+        const fileInput = document.getElementById('fileInput');
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = 100;
+                        tempCanvas.height = 100;
+                        const ctx = tempCanvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, 100, 100);
+                        const imageData = ctx.getImageData(0, 0, 100, 100);
+                        const data = imageData.data;
+                        for (let i = 0; i < 10000; i++) {
+                            const r = data[i * 4];
+                            const g = data[i * 4 + 1];
+                            const b = data[i * 4 + 2];
+                            const pixel = canvas.children[i];
+                            pixel.style.backgroundColor = `rgb(${r},${g},${b})`;
+                        }
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    </script>
+</body>
+</html>
