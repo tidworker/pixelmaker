@@ -19,6 +19,7 @@
             width: 400px;
             height: 400px;
             position: relative;
+            border: 1px solid #fff;
         }
         #canvas {
             display: grid;
@@ -28,6 +29,7 @@
             position: absolute;
             top: 0;
             left: 0;
+            transform-origin: 0 0;
         }
         .pixel {
             width: 4px;
@@ -91,9 +93,6 @@
         <button id="save" class="tool">存檔</button>
         <br>
         <input type="file" id="fileInput" accept="image/*">
-        <br>
-        <br>
-        TID™ PIXEL100X100PAINT
     </div>
     
     <script>
@@ -124,11 +123,11 @@
         let currentColor = colors[0];
         let currentTool = 'pencil'; // Default tool
         let history = []; // For undo functionality
-        let initialScale = 1; // initial scale for zoom
-        let scale = initialScale;
+        let scale = 1;
         let startDistance = 0;
+        let startTransform = { x: 0, y: 0 };
         let isDragging = false;
-        let startDragOffset = { x: 0, y: 0 };
+        let dragStart = { x: 0, y: 0 };
 
         const canvas = document.getElementById('canvas');
         const canvasContainer = document.getElementById('canvasContainer');
@@ -176,12 +175,11 @@
         canvasContainer.addEventListener('touchstart', (e) => {
             if (e.touches.length === 2) {
                 startDistance = getDistance(e.touches[0], e.touches[1]);
+                const transform = getTransform();
+                startTransform = { x: transform.x, y: transform.y };
             } else if (e.touches.length === 1) {
                 isDragging = true;
-                startDragOffset = {
-                    x: e.touches[0].clientX - canvasContainer.offsetLeft,
-                    y: e.touches[0].clientY - canvasContainer.offsetTop
-                };
+                dragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
             }
         });
 
@@ -190,19 +188,17 @@
                 const currentDistance = getDistance(e.touches[0], e.touches[1]);
                 const delta = currentDistance / startDistance;
                 scale *= delta;
-                if (scale < 4) scale = 4;
-                canvas.style.transform = `scale(${scale})`;
+                if (scale < 1) scale = 1;
+                const transform = getTransform();
+                canvas.style.transform = `scale(${scale}) translate(${transform.x}px, ${transform.y}px)`;
                 startDistance = currentDistance;
                 e.preventDefault(); // Prevent scrolling
             } else if (e.touches.length === 1 && isDragging) {
-                const dx = e.touches[0].clientX - startDragOffset.x;
-                const dy = e.touches[0].clientY - startDragOffset.y;
-                canvasContainer.scrollLeft -= dx;
-                canvasContainer.scrollTop -= dy;
-                startDragOffset = {
-                    x: e.touches[0].clientX - canvasContainer.offsetLeft,
-                    y: e.touches[0].clientY - canvasContainer.offsetTop
-                };
+                const dx = (e.touches[0].clientX - dragStart.x) / scale;
+                const dy = (e.touches[0].clientY - dragStart.y) / scale;
+                dragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                const transform = getTransform();
+                canvas.style.transform = `scale(${scale}) translate(${transform.x + dx}px, ${transform.y + dy}px)`;
                 e.preventDefault(); // Prevent scrolling
             }
         });
@@ -215,6 +211,12 @@
             const dx = touch2.clientX - touch1.clientX;
             const dy = touch2.clientY - touch1.clientY;
             return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function getTransform() {
+            const style = window.getComputedStyle(canvas);
+            const matrix = new WebKitCSSMatrix(style.transform);
+            return { x: matrix.m41, y: matrix.m42 };
         }
 
         for (let i = 0; i < 10000; i++) {
