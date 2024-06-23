@@ -29,6 +29,7 @@
             position: absolute;
             top: 0;
             left: 0;
+            transform-origin: 0 0;
         }
         .pixel {
             width: 4px;
@@ -122,6 +123,7 @@
         let currentColor = colors[0];
         let currentTool = 'pencil'; // Default tool
         let history = []; // For undo functionality
+        let isSingleTouch = false; // Flag for single touch
 
         const canvas = document.getElementById('canvas');
         const canvasContainer = document.getElementById('canvasContainer');
@@ -139,6 +141,7 @@
 
         canvas.addEventListener('touchstart', (e) => {
             if (e.touches.length === 1) {
+                isSingleTouch = true;
                 isMouseDown = true;
                 const touch = e.touches[0];
                 const element = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -152,11 +155,13 @@
                     }
                 }
                 e.preventDefault(); // Prevent scrolling
+            } else {
+                isSingleTouch = false;
             }
         });
         canvas.addEventListener('touchend', () => isMouseDown = false);
         canvas.addEventListener('touchmove', (e) => {
-            if (isMouseDown && e.touches.length === 1) {
+            if (isSingleTouch && isMouseDown) {
                 const touch = e.touches[0];
                 const element = document.elementFromPoint(touch.clientX, touch.clientY);
                 if (element && element.classList.contains('pixel') && element.style.backgroundColor !== 'rgb(255, 255, 255)') {
