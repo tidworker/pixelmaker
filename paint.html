@@ -15,20 +15,20 @@
         }
         #canvas {
             display: grid;
-            grid-template-columns: repeat(100, 8px);
-            grid-template-rows: repeat(100, 8px);
+            grid-template-columns: repeat(100, 4px);
+            grid-template-rows: repeat(100, 4px);
             margin-bottom: 10px;
             touch-action: none;
         }
         .pixel {
-            width: 8px;
-            height: 8px;
+            width: 4px;
+            height: 4px;
             box-sizing: border-box;
         }
         #colorPalette {
             display: flex;
             flex-wrap: wrap;
-            max-width: 800px;
+            max-width: 400px;
             justify-content: center;
             margin-top: 10px;
         }
@@ -50,7 +50,7 @@
         #fileInput {
             margin: 5px;
             cursor: pointer;
-            padding: 2px 2px;
+            padding: 4px 4px;
             border: 1px solid #000;
             background-color: #fff;
         }
@@ -74,11 +74,12 @@
     <div id="canvas"></div>
     <div id="colorPalette"></div>
     <div id="tools">
-        <input type="file" id="fileInput" accept="image/*">
         <button id="pencil" class="tool active-tool">鉛筆</button>
         <button id="paintBucket" class="tool">油漆桶</button>
         <button id="undo" class="tool">上一步</button>
         <button id="save" class="tool">存檔</button>
+        <br>
+        <input type="file" id="fileInput" accept="image/*">
     </div>
     
     <script>
