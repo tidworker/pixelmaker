@@ -16,25 +16,25 @@
         #canvasContainer {
             overflow: hidden;
             touch-action: none;
-            width: 400px;
-            height: 800px;
+            width: 350px;
+            height: 700px;
             position: relative;
             border: 1px solid #fff;
         }
         #canvas {
             display: grid;
-            grid-template-columns: repeat(100, 8px);
-            grid-template-rows: repeat(100, 8px);
-            width: 800px;
-            height: 800px;
+            grid-template-columns: repeat(100, 7px);
+            grid-template-rows: repeat(100, 7px);
+            width: 700px;
+            height: 700px;
             position: absolute;
             top: 0;
             left: 0;
             transform-origin: 0 0;
         }
         .pixel {
-            width: 8px;
-            height: 8px;
+            width: 7px;
+            height: 7px;
             box-sizing: border-box;
         }
         #colorPalette {
@@ -81,7 +81,7 @@
             color: #fff;
         }
         #sliderContainer {
-            width: 400px;
+            width: 200px;
             margin-top: 10px;
         }
         #slider {
@@ -94,7 +94,7 @@
         <div id="canvas"></div>
     </div>
     <div id="sliderContainer">
-        <input type="range" id="slider" min="0" max="400" value="200">
+        <input type="range" id="slider" min="0" max="350" value="200">
     </div>
     <div id="colorPalette"></div>
     <div id="tools">
