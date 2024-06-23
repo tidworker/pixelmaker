@@ -17,23 +17,24 @@
             overflow: hidden;
             touch-action: none;
             width: 400px;
-            height: 400px;
+            height: 800px;
             position: relative;
             border: 1px solid #fff;
         }
         #canvas {
             display: grid;
-            grid-template-columns: repeat(100, 4px);
-            grid-template-rows: repeat(100, 4px);
-            margin-bottom: 10px;
+            grid-template-columns: repeat(100, 8px);
+            grid-template-rows: repeat(100, 8px);
+            width: 800px;
+            height: 800px;
             position: absolute;
             top: 0;
             left: 0;
             transform-origin: 0 0;
         }
         .pixel {
-            width: 4px;
-            height: 4px;
+            width: 8px;
+            height: 8px;
             box-sizing: border-box;
         }
         #colorPalette {
@@ -79,11 +80,21 @@
             background-color: #000;
             color: #fff;
         }
+        #sliderContainer {
+            width: 400px;
+            margin-top: 10px;
+        }
+        #slider {
+            width: 100%;
+        }
     </style>
 </head>
 <body>
     <div id="canvasContainer">
         <div id="canvas"></div>
+    </div>
+    <div id="sliderContainer">
+        <input type="range" id="slider" min="0" max="400" value="200">
     </div>
     <div id="colorPalette"></div>
     <div id="tools">
@@ -123,15 +134,18 @@
         let currentColor = colors[0];
         let currentTool = 'pencil'; // Default tool
         let history = []; // For undo functionality
-        let isSingleTouch = false; // Flag for single touch
 
         const canvas = document.getElementById('canvas');
         const canvasContainer = document.getElementById('canvasContainer');
+        const slider = document.getElementById('slider');
         const colorPalette = document.getElementById('colorPalette');
         const pencilButton = document.getElementById('pencil');
         const paintBucketButton = document.getElementById('paintBucket');
         const undoButton = document.getElementById('undo');
         const saveButton = document.getElementById('save');
+
+        // Initial position
+        canvas.style.left = '-200px';
 
         // Create canvas
         let isMouseDown = false;
@@ -141,7 +155,6 @@
 
         canvas.addEventListener('touchstart', (e) => {
             if (e.touches.length === 1) {
-                isSingleTouch = true;
                 isMouseDown = true;
                 const touch = e.touches[0];
                 const element = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -155,13 +168,11 @@
                     }
                 }
                 e.preventDefault(); // Prevent scrolling
-            } else {
-                isSingleTouch = false;
             }
         });
         canvas.addEventListener('touchend', () => isMouseDown = false);
         canvas.addEventListener('touchmove', (e) => {
-            if (isSingleTouch && isMouseDown) {
+            if (isMouseDown && e.touches.length === 1) {
                 const touch = e.touches[0];
                 const element = document.elementFromPoint(touch.clientX, touch.clientY);
                 if (element && element.classList.contains('pixel') && element.style.backgroundColor !== 'rgb(255, 255, 255)') {
@@ -343,6 +354,15 @@
                 };
                 reader.readAsDataURL(file);
             }
+        });
+
+        // Slider functionality
+        slider.addEventListener('input', (e) => {
+            const value = e.target.value - 200;
+            const maxLeft = 0;
+            const maxRight = -canvas.clientWidth + canvasContainer.clientWidth;
+            const newLeft = Math.max(maxRight, Math.min(maxLeft, value * 2));
+            canvas.style.left = `${newLeft}px`;
         });
     </script>
 </body>
