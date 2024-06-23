@@ -40,7 +40,7 @@
         #colorPalette {
             display: flex;
             flex-wrap: wrap;
-            max-width: 400px;
+            max-width: 390px;
             justify-content: center;
             margin-top: 10px;
         }
@@ -62,7 +62,7 @@
         #fileInput {
             margin: 5px;
             cursor: pointer;
-            padding: 4px 4px;
+            padding: 3px 3px;
             border: 1px solid #000;
             background-color: #fff;
         }
@@ -81,7 +81,7 @@
             color: #fff;
         }
         #sliderContainer {
-            width: 200px;
+            width: 350px;
             margin-top: 10px;
         }
         #slider {
@@ -94,16 +94,19 @@
         <div id="canvas"></div>
     </div>
     <div id="sliderContainer">
-        <input type="range" id="slider" min="0" max="350" value="200">
+        <input type="range" id="slider" min="0" max="350" value="175">
     </div>
-    <div id="colorPalette"></div>
+
     <div id="tools">
         <button id="pencil" class="tool active-tool">鉛筆</button>
         <button id="paintBucket" class="tool">油漆桶</button>
         <button id="undo" class="tool">上一步</button>
-        <button id="save" class="tool">存檔</button>
-        <br>
+    </div>
+
+    <div id="colorPalette"></div>
+    <div id="tools">
         <input type="file" id="fileInput" accept="image/*">
+        <button id="save" class="tool">存檔</button>
     </div>
     
     <script>
@@ -145,7 +148,7 @@
         const saveButton = document.getElementById('save');
 
         // Initial position
-        canvas.style.left = '-200px';
+        canvas.style.left = '-175px';
 
         // Create canvas
         let isMouseDown = false;
@@ -165,6 +168,7 @@
                     } else if (currentTool === 'paintBucket') {
                         history.push(canvas.innerHTML); // Save state for undo
                         fill(element, currentColor);
+                        setActiveTool(pencilButton); // Switch back to pencil after using paint bucket
                     }
                 }
                 e.preventDefault(); // Prevent scrolling
@@ -195,6 +199,7 @@
                 } else if (currentTool === 'paintBucket' && pixel.style.backgroundColor !== 'rgb(255, 255, 255)') {
                     history.push(canvas.innerHTML); // Save state for undo
                     fill(pixel, currentColor);
+                    setActiveTool(pencilButton); // Switch back to pencil after using paint bucket
                 }
             });
             pixel.addEventListener('mouseover', () => {
@@ -248,6 +253,7 @@
         function setActiveTool(button) {
             document.querySelectorAll('.tool').forEach(tool => tool.classList.remove('active-tool'));
             button.classList.add('active-tool');
+            currentTool = button.id;
         }
 
         function pixelMouseDownHandler() {
@@ -257,6 +263,7 @@
             } else if (currentTool === 'paintBucket' && this.style.backgroundColor !== 'rgb(255, 255, 255)') {
                 history.push(canvas.innerHTML); // Save state for undo
                 fill(this, currentColor);
+                setActiveTool(pencilButton); // Switch back to pencil after using paint bucket
             }
         }
 
@@ -358,7 +365,7 @@
 
         // Slider functionality
         slider.addEventListener('input', (e) => {
-            const value = e.target.value - 200;
+            const value = e.target.value - 175;
             const maxLeft = 0;
             const maxRight = -canvas.clientWidth + canvasContainer.clientWidth;
             const newLeft = Math.max(maxRight, Math.min(maxLeft, value * 2));
