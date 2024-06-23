@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>點陣圖編輯器</title>
     <style>
         body {
@@ -10,12 +11,14 @@
             align-items: center;
             margin: 0;
             padding: 20px;
+            background-color: #000;
         }
         #canvas {
             display: grid;
             grid-template-columns: repeat(100, 8px);
             grid-template-rows: repeat(100, 8px);
             margin-bottom: 10px;
+            touch-action: none;
         }
         .pixel {
             width: 8px;
@@ -42,10 +45,14 @@
             color: #fff;
         }
         .selected {
-            border: 2px solid #000;
+            border: 2px solid white;
         }
         #fileInput {
-            margin-top: 10px;
+            margin: 5px;
+            cursor: pointer;
+            padding: 2px 2px;
+            border: 1px solid #000;
+            background-color: #fff;
         }
         #tools {
             margin-top: 10px;
@@ -66,8 +73,8 @@
 <body>
     <div id="canvas"></div>
     <div id="colorPalette"></div>
-    <input type="file" id="fileInput" accept="image/*">
     <div id="tools">
+        <input type="file" id="fileInput" accept="image/*">
         <button id="pencil" class="tool active-tool">鉛筆</button>
         <button id="paintBucket" class="tool">油漆桶</button>
         <button id="undo" class="tool">上一步</button>
@@ -115,6 +122,34 @@
         canvas.addEventListener('mouseup', () => isMouseDown = false);
         canvas.addEventListener('mouseleave', () => isMouseDown = false);
 
+        canvas.addEventListener('touchstart', (e) => {
+            isMouseDown = true;
+            const touch = e.touches[0];
+            const element = document.elementFromPoint(touch.clientX, touch.clientY);
+            if (element && element.classList.contains('pixel')) {
+                if (currentTool === 'pencil') {
+                    history.push(canvas.innerHTML); // Save state for undo
+                    element.style.backgroundColor = `rgb(${currentColor})`;
+                } else if (currentTool === 'paintBucket') {
+                    history.push(canvas.innerHTML); // Save state for undo
+                    fill(element, currentColor);
+                }
+            }
+        });
+        canvas.addEventListener('touchend', () => isMouseDown = false);
+        canvas.addEventListener('touchmove', (e) => {
+            if (isMouseDown) {
+                const touch = e.touches[0];
+                const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                if (element && element.classList.contains('pixel')) {
+                    if (currentTool === 'pencil') {
+                        element.style.backgroundColor = `rgb(${currentColor})`;
+                    }
+                }
+                e.preventDefault(); // Prevent scrolling
+            }
+        });
+
         for (let i = 0; i < 10000; i++) {
             const pixel = document.createElement('div');
             pixel.classList.add('pixel');
@@ -129,7 +164,6 @@
             });
             pixel.addEventListener('mouseover', () => {
                 if (currentTool === 'pencil' && isMouseDown) {
-                    history.push(canvas.innerHTML); // Save state for undo
                     pixel.style.backgroundColor = `rgb(${currentColor})`;
                 }
             });
@@ -193,7 +227,6 @@
 
         function pixelMouseOverHandler() {
             if (currentTool === 'pencil' && isMouseDown) {
-                history.push(canvas.innerHTML); // Save state for undo
                 this.style.backgroundColor = `rgb(${currentColor})`;
             }
         }
