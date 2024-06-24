@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PIXEL100X100PAINT</title>
+    <title>點陣圖編輯器</title>
     <style>
         body {
             display: flex;
@@ -65,12 +65,24 @@
             border: 2px solid white;
         }
         #fileInput {
+            width: 180px;
             margin: 5px;
             cursor: pointer;
             padding: 4px 4px;
             border: 1px solid #000;
             background-color: #fff;
             border-radius: 5px;
+
+        }
+        #fileName {
+            width: 100px;
+            margin: 5px;
+            cursor: pointer;
+            padding: 4px 4px;
+            border: 1px solid #000;
+            background-color: #fff;
+            border-radius: 5px;
+
         }
         #tools {
             margin-top: 10px;
@@ -108,6 +120,7 @@
     <div id="colorPalette"></div>
     <div id="tools">
         <input type="file" id="fileInput" accept="image/*">
+        <input type="text" id="fileName" placeholder="輸入檔名">
         <button id="save" class="tool">存檔</button>
     </div>
     
@@ -152,6 +165,7 @@
         const moveCanvasButton = document.getElementById('moveCanvas');
         const undoButton = document.getElementById('undo');
         const saveButton = document.getElementById('save');
+        const fileNameInput = document.getElementById('fileName');
 
         // Initial position
         canvas.style.left = '0px';
@@ -402,10 +416,11 @@
                 ctx.fillRect((i % 100), Math.floor(i / 100), 1, 1);
             }
 
+            const fileName = fileNameInput.value || 'canvas';
             tempCanvas.toBlob(function(blob) {
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.download = 'canvas.bmp';
+                link.download = `${fileName}.bmp`;
                 link.click();
             }, 'image/bmp');
         }
