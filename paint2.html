@@ -88,6 +88,10 @@
             background-color: #000;
             color: #fff;
         }
+        .clicked-tool {
+            background-color: #666;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -227,6 +231,7 @@
                 scale = Math.max(scale, 1); // Minimum scale is 1
                 canvas.style.transform = `scale(${scale})`;
                 updateGridLines(scale);
+                moveCanvasWithinBounds(parseInt(canvas.style.left), parseInt(canvas.style.top));
                 startDistance = currentDistance;
                 e.preventDefault(); // Prevent scrolling
             }
@@ -285,11 +290,15 @@
         pencilButton.addEventListener('click', () => {
             currentTool = 'pencil';
             setActiveTool(pencilButton);
+            isCanvasMovable = false;
+            moveCanvasButton.classList.remove('active-tool');
         });
 
         paintBucketButton.addEventListener('click', () => {
             currentTool = 'paintBucket';
             setActiveTool(paintBucketButton);
+            isCanvasMovable = false;
+            moveCanvasButton.classList.remove('active-tool');
         });
 
         moveCanvasButton.addEventListener('click', () => {
@@ -300,6 +309,10 @@
         undoButton.addEventListener('click', () => {
             if (history.length > 0) {
                 canvas.innerHTML = history.pop();
+                undoButton.classList.add('clicked-tool');
+                setTimeout(() => {
+                    undoButton.classList.remove('clicked-tool');
+                }, 200);
                 // Reattach event listeners to pixels
                 const pixels = canvas.getElementsByClassName('pixel');
                 for (let i = 0; i < pixels.length; i++) {
