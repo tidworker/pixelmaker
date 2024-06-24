@@ -128,26 +128,29 @@
     </div>
     <div id="sliderContainer">
         <div>
-            <label for="horizontalSlider">左右移動</label>
             <input type="range" id="horizontalSlider" class="slider" min="-80" max="80" value="0">
         </div>
         <div>
-            <label for="verticalSlider">上下移動</label>
             <input type="range" id="verticalSlider" class="slider" min="-80" max="80" value="0">
         </div>
         <div>
-            <label for="zoomSlider">放大縮小</label>
             <input type="range" id="zoomSlider" class="slider" min="100" max="200" value="100">
         </div>
     </div>
-    <div id="colorPalette"></div>
+
+
     <div id="tools">
         <button id="pencil" class="tool active-tool">鉛筆</button>
         <button id="paintBucket" class="tool">油漆桶</button>
         <button id="undo" class="tool">上一步</button>
-        <button id="save" class="tool">存檔</button>
-        <br>
+    </div>
+
+    <div id="colorPalette"></div>
+
+
+    <div id="tools">
         <input type="file" id="fileInput" accept="image/*">
+        <button id="save" class="tool">存檔</button>
     </div>
     
     <script>
