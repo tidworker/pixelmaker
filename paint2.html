@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>點陣圖編輯器</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            background-color: #272727;
+        }
+        #canvasContainer {
+            overflow: hidden;
+            touch-action: none;
+            width: 350px;
+            height: 700px;
+            position: relative;
+            border: 1px solid #fff;
+            border-radius: 5px;
+        }
+        #canvas {
+            display: grid;
+            grid-template-columns: repeat(100, 7px);
+            grid-template-rows: repeat(100, 7px);
+            width: 700px;
+            height: 700px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: 0 0;
+        }
+        .pixel {
+            width: 7px;
+            height: 7px;
+            box-sizing: border-box;
+        }
+        .pixel.with-grid {
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+        #colorPalette {
+            display: flex;
+            flex-wrap: wrap;
+            max-width: 390px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .color {
+            width: 32px;
+            height: 32px;
+            margin: 2px;
+            cursor: pointer;
+            border: 1px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #fff;
+            border-radius: 5px;
+        }
+        .selected {
+            border: 2px solid white;
+        }
+        #fileInput {
+            margin: 5px;
+            cursor: pointer;
+            padding: 4px 4px;
+            border: 1px solid #000;
+            background-color: #fff;
+            border-radius: 5px;
+        }
+        #tools {
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+        .tool {
+            margin: 5px;
+            cursor: pointer;
+            padding: 5px 10px;
+            border: 1px solid #000;
+            background-color: #fff;
+            border-radius: 5px;
+        }
+        .active-tool {
+            background-color: #000;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvasContainer">
+        <div id="canvas"></div>
+    </div>
+    <div id="colorPalette"></div>
+    <div id="tools">
+        <button id="pencil" class="tool active-tool">鉛筆</button>
+        <button id="paintBucket" class="tool">油漆桶</button>
+        <button id="moveCanvas" class="tool">移動畫布</button>
+        <button id="undo" class="tool">上一步</button>
+        <button id="save" class="tool">存檔</button>
+        <br>
+        <input type="file" id="fileInput" accept="image/*">
+    </div>
+    
+    <script>
+        const colorMapping = {
+            '0,0,0': '1',
+            '127,127,127': '2',
+            '136,0,21': '3',
+            '237,28,36': '4',
+            '255,127,39': '5',
+            '255,242,0': '6',
+            '34,177,76': '7',
+            '0,162,232': '8',
+            '63,72,204': '9',
+            '163,73,164': '10',
+            '195,195,195': '11',
+            '185,122,87': '12',
+            '255,174,201': '13',
+            '255,201,14': '14',
+            '239,228,176': '15',
+            '181,230,29': '16',
+            '153,217,234': '17',
+            '112,146,190': '18',
+            '200,191,231': '19',
+            '240,135,132': '20'
+        };
+
+        const colors = Object.keys(colorMapping);
+        let currentColor = colors[0];
+        let currentTool = 'pencil'; // Default tool
+        let history = []; // For undo functionality
+        let isCanvasMovable = false;
+        let scale = 1;
+        let startDistance = 0;
+        let startTransform = { x: 0, y: 0 };
+
+        const canvas = document.getElementById('canvas');
+        const canvasContainer = document.getElementById('canvasContainer');
+        const colorPalette = document.getElementById('colorPalette');
+        const pencilButton = document.getElementById('pencil');
+        const paintBucketButton = document.getElementById('paintBucket');
+        const moveCanvasButton = document.getElementById('moveCanvas');
+        const undoButton = document.getElementById('undo');
+        const saveButton = document.getElementById('save');
+
+        // Initial position
+        canvas.style.left = '0px';
+        canvas.style.top = '0px';
+
+        // Create canvas
+        let isMouseDown = false;
+        canvas.addEventListener('mousedown', (e) => {
+            if (isCanvasMovable) {
+                isMouseDown = true;
+                canvas.dataset.startX = e.clientX - parseInt(canvas.style.left);
+                canvas.dataset.startY = e.clientY - parseInt(canvas.style.top);
+            } else {
+                isMouseDown = true;
+            }
+        });
+        canvas.addEventListener('mouseup', () => isMouseDown = false);
+        canvas.addEventListener('mouseleave', () => isMouseDown = false);
+        canvas.addEventListener('mousemove', (e) => {
+            if (isCanvasMovable && isMouseDown) {
+                const newLeft = e.clientX - canvas.dataset.startX;
+                const newTop = e.clientY - canvas.dataset.startY;
+                moveCanvasWithinBounds(newLeft, newTop);
+            }
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (isCanvasMovable && e.touches.length === 1) {
+                isMouseDown = true;
+                const touch = e.touches[0];
+                canvas.dataset.startX = touch.clientX - parseInt(canvas.style.left);
+                canvas.dataset.startY = touch.clientY - parseInt(canvas.style.top);
+                e.preventDefault(); // Prevent scrolling
+            } else if (e.touches.length === 1) {
+                isMouseDown = true;
+                const touch = e.touches[0];
+                const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                if (element && element.classList.contains('pixel') && element.style.backgroundColor !== 'rgb(255, 255, 255)') {
+                    if (currentTool === 'pencil') {
+                        history.push(canvas.innerHTML); // Save state for undo
+                        element.style.backgroundColor = `rgb(${currentColor})`;
+                    } else if (currentTool === 'paintBucket') {
+                        history.push(canvas.innerHTML); // Save state for undo
+                        fill(element, currentColor);
+                        setActiveTool(pencilButton); // Switch back to pencil after using paint bucket
+                    }
+                }
+                e.preventDefault(); // Prevent scrolling
+            } else if (e.touches.length === 2) {
+                startDistance = getDistance(e.touches[0], e.touches[1]);
+                const transform = getTransform();
+                startTransform = { x: transform.x, y: transform.y };
+            }
+        });
+        canvas.addEventListener('touchend', () => isMouseDown = false);
+        canvas.addEventListener('touchmove', (e) => {
+            if (isCanvasMovable && isMouseDown && e.touches.length === 1) {
+                const touch = e.touches[0];
+                const newLeft = touch.clientX - canvas.dataset.startX;
+                const newTop = touch.clientY - canvas.dataset.startY;
+                moveCanvasWithinBounds(newLeft, newTop);
+                e.preventDefault(); // Prevent scrolling
+            } else if (isMouseDown && e.touches.length === 1) {
+                const touch = e.touches[0];
+                const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                if (element && element.classList.contains('pixel') && element.style.backgroundColor !== 'rgb(255, 255, 255)') {
+                    if (currentTool === 'pencil') {
+                        element.style.backgroundColor = `rgb(${currentColor})`;
+                    }
+                }
+                e.preventDefault(); // Prevent scrolling
+            } else if (e.touches.length === 2) {
+                const currentDistance = getDistance(e.touches[0], e.touches[1]);
+                const delta = currentDistance / startDistance;
+                scale *= delta;
+                scale = Math.max(scale, 1); // Minimum scale is 1
+                canvas.style.transform = `scale(${scale})`;
+                updateGridLines(scale);
+                startDistance = currentDistance;
+                e.preventDefault(); // Prevent scrolling
+            }
+        });
+
+        for (let i = 0; i < 10000; i++) {
+            const pixel = document.createElement('div');
+            pixel.classList.add('pixel');
+            pixel.style.backgroundColor = 'rgb(255, 255, 255)'; // Initial color is white
+            pixel.addEventListener('mousedown', () => {
+                if (currentTool === 'pencil' && pixel.style.backgroundColor !== 'rgb(255, 255, 255)') {
+                    history.push(canvas.innerHTML); // Save state for undo
+                    pixel.style.backgroundColor = `rgb(${currentColor})`;
+                } else if (currentTool === 'paintBucket' && pixel.style.backgroundColor !== 'rgb(255, 255, 255)') {
+                    history.push(canvas.innerHTML); // Save state for undo
+                    fill(pixel, currentColor);
+                    setActiveTool(pencilButton); // Switch back to pencil after using paint bucket
+                }
+            });
+            pixel.addEventListener('mouseover', () => {
+                if (currentTool === 'pencil' && isMouseDown && pixel.style.backgroundColor !== 'rgb(255, 255, 255)') {
+                    pixel.style.backgroundColor = `rgb(${currentColor})`;
+                }
+            });
+            canvas.appendChild(pixel);
+        }
+
+        // Create color palette
+        colors.forEach((color, index) => {
+            const colorBox = document.createElement('div');
+            colorBox.classList.add('color');
+            if (color === currentColor) colorBox.classList.add('selected');
+            colorBox.style.backgroundColor = `rgb(${color})`;
+            colorBox.innerText = colorMapping[color];
+            colorBox.addEventListener('click', () => {
+                document.querySelectorAll('.color').forEach(c => c.classList.remove('selected'));
+                colorBox.classList.add('selected');
+                currentColor = color;
+            });
+            colorPalette.appendChild(colorBox);
+        });
+
+        // Tool selection
+        pencilButton.addEventListener('click', () => {
+            currentTool = 'pencil';
+            setActiveTool(pencilButton);
+        });
+
+        paintBucketButton.addEventListener('click', () => {
+            currentTool = 'paintBucket';
+            setActiveTool(paintBucketButton);
+        });
+
+        moveCanvasButton.addEventListener('click', () => {
+            isCanvasMovable = !isCanvasMovable;
+            moveCanvasButton.classList.toggle('active-tool', isCanvasMovable);
+        });
+
+        undoButton.addEventListener('click', () => {
+            if (history.length > 0) {
+                canvas.innerHTML = history.pop();
+                // Reattach event listeners to pixels
+                const pixels = canvas.getElementsByClassName('pixel');
+                for (let i = 0; i < pixels.length; i++) {
+                    pixels[i].addEventListener('mousedown', pixelMouseDownHandler);
+                    pixels[i].addEventListener('mouseover', pixelMouseOverHandler);
+                }
+            }
+        });
+
+        saveButton.addEventListener('click', saveAsBMP);
+
+        function setActiveTool(button) {
+            document.querySelectorAll('.tool').forEach(tool => tool.classList.remove('active-tool'));
+            button.classList.add('active-tool');
+            currentTool = button.id;
+        }
+
+        function pixelMouseDownHandler() {
+            if (currentTool === 'pencil' && this.style.backgroundColor !== 'rgb(255, 255, 255)') {
+                history.push(canvas.innerHTML); // Save state for undo
+                this.style.backgroundColor = `rgb(${currentColor})`;
+            } else if (currentTool === 'paintBucket' && this.style.backgroundColor !== 'rgb(255, 255, 255)') {
+                history.push(canvas.innerHTML); // Save state for undo
+                fill(this, currentColor);
+                setActiveTool(pencilButton); // Switch back to pencil after using paint bucket
+            }
+        }
+
+        function pixelMouseOverHandler() {
+            if (currentTool === 'pencil' && isMouseDown && this.style.backgroundColor !== 'rgb(255, 255, 255)') {
+                this.style.backgroundColor = `rgb(${currentColor})`;
+            }
+        }
+
+        // Fill function for paint bucket
+        function fill(startPixel, fillColor) {
+            const targetColor = startPixel.style.backgroundColor;
+            const fillColorRGB = `rgb(${fillColor})`;
+            if (targetColor === fillColorRGB) return;
+
+            const pixelsToCheck = [startPixel];
+            const canvasChildren = Array.from(canvas.children);
+
+            while (pixelsToCheck.length > 0) {
+                const pixel = pixelsToCheck.pop();
+                if (pixel.style.backgroundColor === targetColor && targetColor !== 'rgb(255, 255, 255)') {
+                    pixel.style.backgroundColor = fillColorRGB;
+                    const pixelIndex = canvasChildren.indexOf(pixel);
+                    const neighbors = getNeighbors(pixelIndex);
+                    neighbors.forEach(neighbor => {
+                        if (canvasChildren[neighbor] && canvasChildren[neighbor].style.backgroundColor === targetColor) {
+                            pixelsToCheck.push(canvasChildren[neighbor]);
+                        }
+                    });
+                }
+            }
+        }
+
+        // Get neighboring pixels
+        function getNeighbors(index) {
+            const neighbors = [];
+            const row = Math.floor(index / 100);
+            const col = index % 100;
+            if (row > 0) neighbors.push(index - 100); // Top
+            if (row < 99) neighbors.push(index + 100); // Bottom
+            if (col > 0) neighbors.push(index - 1); // Left
+            if (col < 99) neighbors.push(index + 1); // Right
+            return neighbors;
+        }
+
+        // Save as BMP
+        function saveAsBMP() {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 100;
+            tempCanvas.height = 100;
+            const ctx = tempCanvas.getContext('2d');
+
+            const pixels = canvas.getElementsByClassName('pixel');
+            for (let i = 0; i < pixels.length; i++) {
+                const pixel = pixels[i];
+                const color = pixel.style.backgroundColor;
+                const rgb = color.match(/\d+/g);
+                ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+                ctx.fillRect((i % 100), Math.floor(i / 100), 1, 1);
+            }
+
+            tempCanvas.toBlob(function(blob) {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'canvas.bmp';
+                link.click();
+            }, 'image/bmp');
+        }
+
+        // Import image for editing
+        const fileInput = document.getElementById('fileInput');
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = 100;
+                        tempCanvas.height = 100;
+                        const ctx = tempCanvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, 100, 100);
+                        const imageData = ctx.getImageData(0, 0, 100, 100);
+                        const data = imageData.data;
+                        for (let i = 0; i < 10000; i++) {
+                            const r = data[i * 4];
+                            const g = data[i * 4 + 1];
+                            const b = data[i * 4 + 2];
+                            const pixel = canvas.children[i];
+                            pixel.style.backgroundColor = `rgb(${r},${g},${b})`;
+                        }
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function getDistance(touch1, touch2) {
+            const dx = touch2.clientX - touch1.clientX;
+            const dy = touch2.clientY - touch1.clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function getTransform() {
+            const style = window.getComputedStyle(canvas);
+            const matrix = new WebKitCSSMatrix(style.transform);
+            return { x: matrix.m41, y: matrix.m42 };
+        }
+
+        function moveCanvasWithinBounds(newLeft, newTop) {
+            const maxLeft = 0;
+            const maxRight = canvasContainer.clientWidth - canvas.clientWidth * scale;
+            const maxTop = 0;
+            const maxBottom = canvasContainer.clientHeight - canvas.clientHeight * scale;
+            canvas.style.left = `${Math.max(maxRight, Math.min(maxLeft, newLeft))}px`;
+            canvas.style.top = `${Math.max(maxBottom, Math.min(maxTop, newTop))}px`;
+        }
+
+        function updateGridLines(scale) {
+            const pixels = canvas.getElementsByClassName('pixel');
+            for (let i = 0; i < pixels.length; i++) {
+                if (Math.round(scale) === scale) { // Check if scale is an integer
+                    pixels[i].classList.add('with-grid');
+                } else {
+                    pixels[i].classList.remove('with-grid');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
