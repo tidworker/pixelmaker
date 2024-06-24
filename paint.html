@@ -20,6 +20,7 @@
             height: 700px;
             position: relative;
             border: 1px solid #fff;
+            border-radius: 5px;
         }
         #canvas {
             display: grid;
@@ -36,6 +37,9 @@
             width: 7px;
             height: 7px;
             box-sizing: border-box;
+        }
+        .pixel.with-grid {
+            border: 1px solid rgba(0, 0, 0, 0);
         }
         #colorPalette {
             display: flex;
@@ -55,6 +59,7 @@
             justify-content: center;
             font-size: 14px;
             color: #fff;
+            border-radius: 5px;
         }
         .selected {
             border: 2px solid white;
@@ -62,12 +67,14 @@
         #fileInput {
             margin: 5px;
             cursor: pointer;
-            padding: 3px 3px;
+            padding: 4px 4px;
             border: 1px solid #000;
             background-color: #fff;
+            border-radius: 5px;
         }
         #tools {
             margin-top: 10px;
+            border-radius: 5px;
         }
         .tool {
             margin: 5px;
@@ -75,17 +82,43 @@
             padding: 5px 10px;
             border: 1px solid #000;
             background-color: #fff;
+            border-radius: 5px;
         }
         .active-tool {
             background-color: #000;
             color: #fff;
         }
         #sliderContainer {
-            width: 250px;
+            display: flex;
+            justify-content: space-between;
+            width: 320px;
             margin-top: 10px;
         }
-        #slider {
-            width: 100%;
+        .slider {
+            width: 100px;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 7px;
+            background: white;
+            outline: none;
+            transition: opacity .2s;
+            border-radius: 5px;
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 13px;
+            height: 13px;
+            background: white;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        .slider::-moz-range-thumb {
+            width: 13px;
+            height: 13px;
+            background: white;
+            cursor: pointer;
+            border-radius: 50%;
         }
     </style>
 </head>
@@ -94,19 +127,27 @@
         <div id="canvas"></div>
     </div>
     <div id="sliderContainer">
-        <input type="range" id="slider" min="0" max="350" value="175">
+        <div>
+            <label for="horizontalSlider">左右移動</label>
+            <input type="range" id="horizontalSlider" class="slider" min="-80" max="80" value="0">
+        </div>
+        <div>
+            <label for="verticalSlider">上下移動</label>
+            <input type="range" id="verticalSlider" class="slider" min="-80" max="80" value="0">
+        </div>
+        <div>
+            <label for="zoomSlider">放大縮小</label>
+            <input type="range" id="zoomSlider" class="slider" min="100" max="200" value="100">
+        </div>
     </div>
-
+    <div id="colorPalette"></div>
     <div id="tools">
         <button id="pencil" class="tool active-tool">鉛筆</button>
         <button id="paintBucket" class="tool">油漆桶</button>
         <button id="undo" class="tool">上一步</button>
-    </div>
-
-    <div id="colorPalette"></div>
-    <div id="tools">
-        <input type="file" id="fileInput" accept="image/*">
         <button id="save" class="tool">存檔</button>
+        <br>
+        <input type="file" id="fileInput" accept="image/*">
     </div>
     
     <script>
@@ -140,7 +181,9 @@
 
         const canvas = document.getElementById('canvas');
         const canvasContainer = document.getElementById('canvasContainer');
-        const slider = document.getElementById('slider');
+        const horizontalSlider = document.getElementById('horizontalSlider');
+        const verticalSlider = document.getElementById('verticalSlider');
+        const zoomSlider = document.getElementById('zoomSlider');
         const colorPalette = document.getElementById('colorPalette');
         const pencilButton = document.getElementById('pencil');
         const paintBucketButton = document.getElementById('paintBucket');
@@ -148,7 +191,8 @@
         const saveButton = document.getElementById('save');
 
         // Initial position
-        canvas.style.left = '-175px';
+        canvas.style.left = '0px';
+        canvas.style.top = '0px';
 
         // Create canvas
         let isMouseDown = false;
@@ -363,14 +407,57 @@
             }
         });
 
-        // Slider functionality
-        slider.addEventListener('input', (e) => {
-            const value = e.target.value - 175;
+        // Horizontal Slider functionality
+        horizontalSlider.addEventListener('input', (e) => {
+            const value = e.target.value;
             const maxLeft = 0;
-            const maxRight = -canvas.clientWidth + canvasContainer.clientWidth;
-            const newLeft = Math.max(maxRight, Math.min(maxLeft, value * 2));
+            const maxRight = -canvas.clientWidth * zoomSlider.value / 100 + canvasContainer.clientWidth;
+            const newLeft = Math.max(maxRight, Math.min(maxLeft, value * 4.375));
             canvas.style.left = `${newLeft}px`;
         });
+
+        horizontalSlider.addEventListener('mouseup', () => {
+            horizontalSlider.value = 0;
+        });
+
+        horizontalSlider.addEventListener('touchend', () => {
+            horizontalSlider.value = 0;
+        });
+
+        // Vertical Slider functionality
+        verticalSlider.addEventListener('input', (e) => {
+            const value = e.target.value;
+            const maxTop = 0;
+            const maxBottom = -canvas.clientHeight * zoomSlider.value / 100 + canvasContainer.clientHeight;
+            const newTop = Math.max(maxBottom, Math.min(maxTop, value * 8.75));
+            canvas.style.top = `${newTop}px`;
+        });
+
+        verticalSlider.addEventListener('mouseup', () => {
+            verticalSlider.value = 0;
+        });
+
+        verticalSlider.addEventListener('touchend', () => {
+            verticalSlider.value = 0;
+        });
+
+        // Zoom Slider functionality
+        zoomSlider.addEventListener('input', (e) => {
+            const value = e.target.value / 100;
+            canvas.style.transform = `scale(${value})`;
+            updateGridLines(value);
+        });
+
+        function updateGridLines(scale) {
+            const pixels = canvas.getElementsByClassName('pixel');
+            for (let i = 0; i < pixels.length; i++) {
+                if (Math.round(scale) === scale) { // Check if scale is an integer
+                    pixels[i].classList.add('with-grid');
+                } else {
+                    pixels[i].classList.remove('with-grid');
+                }
+            }
+        }
     </script>
 </body>
 </html>
