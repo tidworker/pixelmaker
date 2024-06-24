@@ -16,7 +16,7 @@
         #canvasContainer {
             overflow: hidden;
             touch-action: none;
-            width: 350px;
+            width: 380px;
             height: 700px;
             position: relative;
             border: 1px solid #fff;
@@ -94,15 +94,18 @@
     <div id="canvasContainer">
         <div id="canvas"></div>
     </div>
-    <div id="colorPalette"></div>
+
     <div id="tools">
         <button id="pencil" class="tool active-tool">鉛筆</button>
         <button id="paintBucket" class="tool">油漆桶</button>
         <button id="moveCanvas" class="tool">移動畫布</button>
         <button id="undo" class="tool">上一步</button>
-        <button id="save" class="tool">存檔</button>
-        <br>
+    </div>
+
+    <div id="colorPalette"></div>
+    <div id="tools">
         <input type="file" id="fileInput" accept="image/*">
+        <button id="save" class="tool">存檔</button>
     </div>
     
     <script>
@@ -226,6 +229,18 @@
                 updateGridLines(scale);
                 startDistance = currentDistance;
                 e.preventDefault(); // Prevent scrolling
+            }
+        });
+
+        canvasContainer.addEventListener('wheel', (e) => {
+            if (isCanvasMovable) {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                scale *= delta;
+                scale = Math.max(scale, 1); // Minimum scale is 1
+                canvas.style.transform = `scale(${scale})`;
+                updateGridLines(scale);
+                moveCanvasWithinBounds(parseInt(canvas.style.left), parseInt(canvas.style.top));
             }
         });
 
