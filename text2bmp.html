@@ -180,9 +180,7 @@
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `${text}_text.bmp`;
-            link.textContent = '下載BMP圖像';
-            document.body.appendChild(link);
+            link.download = `${text}.bmp`;
             link.click();
             URL.revokeObjectURL(url);
         }
