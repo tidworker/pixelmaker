@@ -16,7 +16,7 @@
         #canvasContainer {
             overflow: hidden;
             touch-action: none;
-            width: 350px;
+            width: 380px;
             height: 700px;
             position: relative;
             border: 1px solid #fff;
@@ -39,7 +39,7 @@
             box-sizing: border-box;
         }
         .pixel.with-grid {
-            border: 1px solid rgba(0, 0, 0, 0);
+            border: 1px solid rgba(0, 0, 0, 0.2);
         }
         #colorPalette {
             display: flex;
@@ -65,12 +65,24 @@
             border: 2px solid white;
         }
         #fileInput {
+            width: 170px;
             margin: 5px;
             cursor: pointer;
             padding: 4px 4px;
             border: 1px solid #000;
             background-color: #fff;
             border-radius: 5px;
+
+        }
+        #fileName {
+            width: 100px;
+            margin: 5px;
+            cursor: pointer;
+            padding: 4px 4px;
+            border: 1px solid #000;
+            background-color: #fff;
+            border-radius: 5px;
+
         }
         #tools {
             margin-top: 10px;
@@ -88,37 +100,8 @@
             background-color: #000;
             color: #fff;
         }
-        #sliderContainer {
-            display: flex;
-            justify-content: space-between;
-            width: 320px;
-            margin-top: 10px;
-        }
-        .slider {
-            width: 100px;
-            -webkit-appearance: none;
-            appearance: none;
-            height: 7px;
-            background: white;
-            outline: none;
-            transition: opacity .2s;
-            border-radius: 5px;
-        }
-        .slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 13px;
-            height: 13px;
-            background: white;
-            cursor: pointer;
-            border-radius: 50%;
-        }
-        .slider::-moz-range-thumb {
-            width: 13px;
-            height: 13px;
-            background: white;
-            cursor: pointer;
-            border-radius: 50%;
+        .clicked-tool {
+            background-color: #555;
         }
     </style>
 </head>
@@ -126,30 +109,18 @@
     <div id="canvasContainer">
         <div id="canvas"></div>
     </div>
-    <div id="sliderContainer">
-        <div>
-            <input type="range" id="horizontalSlider" class="slider" min="-80" max="80" value="0">
-        </div>
-        <div>
-            <input type="range" id="verticalSlider" class="slider" min="-80" max="80" value="0">
-        </div>
-        <div>
-            <input type="range" id="zoomSlider" class="slider" min="100" max="200" value="100">
-        </div>
-    </div>
-
 
     <div id="tools">
         <button id="pencil" class="tool active-tool">鉛筆</button>
         <button id="paintBucket" class="tool">油漆桶</button>
+        <button id="moveCanvas" class="tool">移動畫布</button>
         <button id="undo" class="tool">上一步</button>
     </div>
 
     <div id="colorPalette"></div>
-
-
     <div id="tools">
         <input type="file" id="fileInput" accept="image/*">
+        <input type="text" id="fileName" placeholder="輸入檔名">
         <button id="save" class="tool">存檔</button>
     </div>
     
@@ -181,17 +152,20 @@
         let currentColor = colors[0];
         let currentTool = 'pencil'; // Default tool
         let history = []; // For undo functionality
+        let isCanvasMovable = false;
+        let scale = 1;
+        let startDistance = 0;
+        let startTransform = { x: 0, y: 0 };
 
         const canvas = document.getElementById('canvas');
         const canvasContainer = document.getElementById('canvasContainer');
-        const horizontalSlider = document.getElementById('horizontalSlider');
-        const verticalSlider = document.getElementById('verticalSlider');
-        const zoomSlider = document.getElementById('zoomSlider');
         const colorPalette = document.getElementById('colorPalette');
         const pencilButton = document.getElementById('pencil');
         const paintBucketButton = document.getElementById('paintBucket');
+        const moveCanvasButton = document.getElementById('moveCanvas');
         const undoButton = document.getElementById('undo');
         const saveButton = document.getElementById('save');
+        const fileNameInput = document.getElementById('fileName');
 
         // Initial position
         canvas.style.left = '0px';
@@ -199,12 +173,33 @@
 
         // Create canvas
         let isMouseDown = false;
-        canvas.addEventListener('mousedown', () => isMouseDown = true);
+        canvas.addEventListener('mousedown', (e) => {
+            if (isCanvasMovable) {
+                isMouseDown = true;
+                canvas.dataset.startX = e.clientX - parseInt(canvas.style.left);
+                canvas.dataset.startY = e.clientY - parseInt(canvas.style.top);
+            } else {
+                isMouseDown = true;
+            }
+        });
         canvas.addEventListener('mouseup', () => isMouseDown = false);
         canvas.addEventListener('mouseleave', () => isMouseDown = false);
+        canvas.addEventListener('mousemove', (e) => {
+            if (isCanvasMovable && isMouseDown) {
+                const newLeft = e.clientX - canvas.dataset.startX;
+                const newTop = e.clientY - canvas.dataset.startY;
+                moveCanvasWithinBounds(newLeft, newTop);
+            }
+        });
 
         canvas.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 1) {
+            if (isCanvasMovable && e.touches.length === 1) {
+                isMouseDown = true;
+                const touch = e.touches[0];
+                canvas.dataset.startX = touch.clientX - parseInt(canvas.style.left);
+                canvas.dataset.startY = touch.clientY - parseInt(canvas.style.top);
+                e.preventDefault(); // Prevent scrolling
+            } else if (e.touches.length === 1) {
                 isMouseDown = true;
                 const touch = e.touches[0];
                 const element = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -219,11 +214,21 @@
                     }
                 }
                 e.preventDefault(); // Prevent scrolling
+            } else if (e.touches.length === 2) {
+                startDistance = getDistance(e.touches[0], e.touches[1]);
+                const transform = getTransform();
+                startTransform = { x: transform.x, y: transform.y };
             }
         });
         canvas.addEventListener('touchend', () => isMouseDown = false);
         canvas.addEventListener('touchmove', (e) => {
-            if (isMouseDown && e.touches.length === 1) {
+            if (isCanvasMovable && isMouseDown && e.touches.length === 1) {
+                const touch = e.touches[0];
+                const newLeft = touch.clientX - canvas.dataset.startX;
+                const newTop = touch.clientY - canvas.dataset.startY;
+                moveCanvasWithinBounds(newLeft, newTop);
+                e.preventDefault(); // Prevent scrolling
+            } else if (isMouseDown && e.touches.length === 1) {
                 const touch = e.touches[0];
                 const element = document.elementFromPoint(touch.clientX, touch.clientY);
                 if (element && element.classList.contains('pixel') && element.style.backgroundColor !== 'rgb(255, 255, 255)') {
@@ -232,6 +237,27 @@
                     }
                 }
                 e.preventDefault(); // Prevent scrolling
+            } else if (e.touches.length === 2) {
+                const currentDistance = getDistance(e.touches[0], e.touches[1]);
+                const delta = currentDistance / startDistance;
+                scale *= delta;
+                scale = Math.max(scale, 1); // Minimum scale is 1
+                canvas.style.transform = `scale(${scale})`;
+                updateGridLines(scale);
+                startDistance = currentDistance;
+                e.preventDefault(); // Prevent scrolling
+            }
+        });
+
+        canvasContainer.addEventListener('wheel', (e) => {
+            if (isCanvasMovable) {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                scale *= delta;
+                scale = Math.max(scale, 1); // Minimum scale is 1
+                canvas.style.transform = `scale(${scale})`;
+                updateGridLines(scale);
+                moveCanvasWithinBounds(parseInt(canvas.style.left), parseInt(canvas.style.top));
             }
         });
 
@@ -276,16 +302,34 @@
         pencilButton.addEventListener('click', () => {
             currentTool = 'pencil';
             setActiveTool(pencilButton);
+            isCanvasMovable = false;
+            moveCanvasButton.classList.remove('active-tool');
         });
 
         paintBucketButton.addEventListener('click', () => {
             currentTool = 'paintBucket';
             setActiveTool(paintBucketButton);
+            isCanvasMovable = false;
+            moveCanvasButton.classList.remove('active-tool');
+        });
+
+        moveCanvasButton.addEventListener('click', () => {
+            isCanvasMovable = !isCanvasMovable;
+            moveCanvasButton.classList.toggle('active-tool', isCanvasMovable);
+            if (isCanvasMovable) {
+                pencilButton.classList.remove('active-tool');
+                paintBucketButton.classList.remove('active-tool');
+                currentTool = '';
+            }
         });
 
         undoButton.addEventListener('click', () => {
             if (history.length > 0) {
                 canvas.innerHTML = history.pop();
+                undoButton.classList.add('clicked-tool');
+                setTimeout(() => {
+                    undoButton.classList.remove('clicked-tool');
+                }, 200);
                 // Reattach event listeners to pixels
                 const pixels = canvas.getElementsByClassName('pixel');
                 for (let i = 0; i < pixels.length; i++) {
@@ -372,10 +416,11 @@
                 ctx.fillRect((i % 100), Math.floor(i / 100), 1, 1);
             }
 
+            const fileName = fileNameInput.value || 'canvas';
             tempCanvas.toBlob(function(blob) {
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.download = 'canvas.bmp';
+                link.download = `${fileName}.bmp`;
                 link.click();
             }, 'image/bmp');
         }
@@ -410,46 +455,26 @@
             }
         });
 
-        // Horizontal Slider functionality
-        horizontalSlider.addEventListener('input', (e) => {
-            const value = e.target.value;
+        function getDistance(touch1, touch2) {
+            const dx = touch2.clientX - touch1.clientX;
+            const dy = touch2.clientY - touch1.clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function getTransform() {
+            const style = window.getComputedStyle(canvas);
+            const matrix = new WebKitCSSMatrix(style.transform);
+            return { x: matrix.m41, y: matrix.m42 };
+        }
+
+        function moveCanvasWithinBounds(newLeft, newTop) {
             const maxLeft = 0;
-            const maxRight = -canvas.clientWidth * zoomSlider.value / 100 + canvasContainer.clientWidth;
-            const newLeft = Math.max(maxRight, Math.min(maxLeft, value * 4.375));
-            canvas.style.left = `${newLeft}px`;
-        });
-
-        horizontalSlider.addEventListener('mouseup', () => {
-            horizontalSlider.value = 0;
-        });
-
-        horizontalSlider.addEventListener('touchend', () => {
-            horizontalSlider.value = 0;
-        });
-
-        // Vertical Slider functionality
-        verticalSlider.addEventListener('input', (e) => {
-            const value = e.target.value;
+            const maxRight = canvasContainer.clientWidth - canvas.clientWidth * scale;
             const maxTop = 0;
-            const maxBottom = -canvas.clientHeight * zoomSlider.value / 100 + canvasContainer.clientHeight;
-            const newTop = Math.max(maxBottom, Math.min(maxTop, value * 8.75));
-            canvas.style.top = `${newTop}px`;
-        });
-
-        verticalSlider.addEventListener('mouseup', () => {
-            verticalSlider.value = 0;
-        });
-
-        verticalSlider.addEventListener('touchend', () => {
-            verticalSlider.value = 0;
-        });
-
-        // Zoom Slider functionality
-        zoomSlider.addEventListener('input', (e) => {
-            const value = e.target.value / 100;
-            canvas.style.transform = `scale(${value})`;
-            updateGridLines(value);
-        });
+            const maxBottom = canvasContainer.clientHeight - canvas.clientHeight * scale;
+            canvas.style.left = `${Math.max(maxRight, Math.min(maxLeft, newLeft))}px`;
+            canvas.style.top = `${Math.max(maxBottom, Math.min(maxTop, newTop))}px`;
+        }
 
         function updateGridLines(scale) {
             const pixels = canvas.getElementsByClassName('pixel');
