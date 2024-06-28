@@ -25,7 +25,7 @@
         }
 
         .question {
-            font-size: 24px;
+            font-size: 36px;
             margin-bottom: 20px;
         }
 
@@ -38,7 +38,7 @@
         .answer {
             font-size: 20px;
             padding: 10px 20px;
-            background-color: #ff69b4;
+            background-color: gray;
             color: #fff;
             border: none;
             border-radius: 5px;
@@ -48,7 +48,7 @@
         }
 
         .answer:hover:not(.disabled) {
-            background-color: #ff1493;
+            background-color: gray;
         }
 
         .answer.incorrect {
@@ -77,11 +77,12 @@
         }
 
         .progress-bar-container {
-            width: 45%;
+            width: 40%;
             height: 20px;
             border-radius: 5px;
             margin-top: 10px;
-            position: relative;
+            position: absolute;
+            top: 10px;
             background-color: red;
         }
 
@@ -101,15 +102,15 @@
             width: 100%;
             text-align: center;
             line-height: 20px;
-            font-size: 16px;
+            font-size: 14px;
             color: white;
         }
 
         .start, .restart {
-            font-size: 20px;
+            font-size: 16px;
             margin-top: 20px;
             padding: 10px 20px;
-            background-color: #28a745;
+            background-color: gray;
             color: #fff;
             border: none;
             border-radius: 5px;
@@ -118,7 +119,7 @@
         }
 
         .start:hover, .restart:hover {
-            background-color: #218838;
+            background-color: black;
         }
 
         .progress-bar-container.left {
@@ -142,26 +143,30 @@
     <div class="game-container">
         <button class="start" onclick="startGame()">開始遊戲</button>
         <div id="game-content" style="display:none;">
+            <button class="restart" onclick="restartGame()">重新開始</button>
+            <br>
+            <div class="best-time">最快完成時間: <span id="best-time">N/A</span></div>
+            <br>
+            <div class="progress-bar-wrapper">
+                <img id="background-image" src="001.gif" alt="background">
+                <div class="progress-bar-container left">
+                    <div class="progress-bar" id="progress-bar-a" style="width: 100%;"></div>
+                    <div class="progress-bar-text">黃晴晴</div>
+                </div>
+                <div class="timer" id="timer">0</div>
+                <div class="progress-bar-container right">
+                    <div class="progress-bar" id="progress-bar-b" style="width: 100%;"></div>
+                    <div class="progress-bar-text">肥嘟嘟男爵</div>
+                </div>
+            </div>
+
             <div id="question" class="question"></div>
             <div class="answers">
                 <button class="answer" onclick="checkAnswer(0)"></button>
                 <button class="answer" onclick="checkAnswer(1)"></button>
                 <button class="answer" onclick="checkAnswer(2)"></button>
             </div>
-            <div class="progress-bar-wrapper">
-                <img id="background-image" src="001.gif" alt="background">
-                <div class="progress-bar-container left">
-                    <div class="progress-bar" id="progress-bar-a" style="width: 100%;"></div>
-                    <div class="progress-bar-text">表現計量條</div>
-                </div>
-                <div class="timer" id="timer">0</div>
-                <div class="progress-bar-container right">
-                    <div class="progress-bar" id="progress-bar-b" style="width: 100%;"></div>
-                    <div class="progress-bar-text">錯誤計量條</div>
-                </div>
-            </div>
-            <div class="best-time">最快完成時間: <span id="best-time">N/A</span></div>
-            <button class="restart" onclick="restartGame()">重新開始</button>
+
         </div>
     </div>
     <script>
@@ -219,7 +224,7 @@
             answerButtons.forEach((button, index) => {
                 button.textContent = currentQuestion.answers[index];
                 button.classList.remove('incorrect', 'disabled');
-                button.style.backgroundColor = '#ff69b4';
+                button.style.backgroundColor = 'gary';
             });
         }
 
