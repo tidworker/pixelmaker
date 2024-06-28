@@ -79,16 +79,16 @@
         .progress-bar-container {
             width: 40%;
             height: 20px;
-            border-radius: 5px;
+            border-radius: 2px;
             position: absolute;
-            top: 10px;
+            top: 20px;
             background-color: red;
         }
 
         .progress-bar {
             height: 20px;
             background-color: #4caf50;
-            border-radius: 5px;
+            border-radius: 2px;
             text-align: center;
             color: white;
             position: absolute;
@@ -131,7 +131,7 @@
 
         .timer {
             position: absolute;
-            top: 40px;
+            top: 10px;
             left: 50%;
             transform: translateX(-50%);
             background-color: transparent;
@@ -144,7 +144,7 @@
         <div id="game-content" style="display:none;">
             <button class="restart" onclick="location.reload()">重新開始</button>
             <br>
-            <div class="best-time">最快完成時間: <span id="best-time">N/A</span></div>
+            <div class="best-time">最快勝利時間: <span id="best-time">N/A</span></div>
             <br>
             <div class="progress-bar-wrapper">
                 <img id="background-image" src="001.gif" alt="background">
@@ -274,7 +274,7 @@
             progressBarB.style.width = progressB + '%';
             if (progressB <= 0) {
                 clearInterval(timer);
-                playGif('02.png', 3000, () => {
+                playGif('02.png', 5000, () => {
                     if (confirm('你失敗了！是否重新挑戰？')) {
                         restartGame();
                     }
@@ -285,7 +285,7 @@
         function speakQuestion(question) {
             const msg = new SpeechSynthesisUtterance(question);
             msg.lang = 'zh-TW';
-            msg.rate = 0.8;  // 放慢語速
+            msg.rate = 0.7;  // 放慢語速
             window.speechSynthesis.speak(msg);
         }
 
