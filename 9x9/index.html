@@ -262,7 +262,7 @@
             progressBarA.style.width = progressA + '%';
             if (progressA <= 0) {
                 clearInterval(timer);
-                playGif('01.png', 3000, () => {
+                playGif('01.png', 5000, () => {
                     if (confirm('你贏了！是否重新挑戰？')) {
                         restartGame();
                     }
