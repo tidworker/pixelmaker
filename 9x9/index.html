@@ -80,7 +80,6 @@
             width: 40%;
             height: 20px;
             border-radius: 5px;
-            margin-top: 10px;
             position: absolute;
             top: 10px;
             background-color: red;
@@ -132,7 +131,7 @@
 
         .timer {
             position: absolute;
-            top: 10px;
+            top: 40px;
             left: 50%;
             transform: translateX(-50%);
             background-color: transparent;
@@ -143,20 +142,20 @@
     <div class="game-container">
         <button class="start" onclick="startGame()">開始遊戲</button>
         <div id="game-content" style="display:none;">
-            <button class="restart" onclick="restartGame()">重新開始</button>
+            <button class="restart" onclick="location.reload()">重新開始</button>
             <br>
             <div class="best-time">最快完成時間: <span id="best-time">N/A</span></div>
             <br>
             <div class="progress-bar-wrapper">
                 <img id="background-image" src="001.gif" alt="background">
                 <div class="progress-bar-container left">
-                    <div class="progress-bar" id="progress-bar-a" style="width: 100%;"></div>
+                    <div class="progress-bar" id="progress-bar-b" style="width: 100%;"></div>
                     <div class="progress-bar-text">黃晴晴</div>
                 </div>
                 <div class="timer" id="timer">0</div>
                 <div class="progress-bar-container right">
-                    <div class="progress-bar" id="progress-bar-b" style="width: 100%;"></div>
-                    <div class="progress-bar-text">肥嘟嘟男爵</div>
+                    <div class="progress-bar" id="progress-bar-a" style="width: 100%;"></div>
+                    <div class="progress-bar-text">肥豬豬男爵</div>
                 </div>
             </div>
 
@@ -194,10 +193,17 @@
             const num1 = Math.floor(Math.random() * 9) + 1;
             const num2 = Math.floor(Math.random() * 9) + 1;
             const correctAnswer = num1 * num2;
+            let answers = [correctAnswer];
+            while (answers.length < 3) {
+                let wrongAnswer = generateRandomAnswer();
+                if (!answers.includes(wrongAnswer)) {
+                    answers.push(wrongAnswer);
+                }
+            }
             currentQuestion = {
                 question: `${num1} × ${num2}`,
                 correctAnswer: correctAnswer,
-                answers: shuffleAnswers([correctAnswer, generateRandomAnswer(), generateRandomAnswer()])
+                answers: shuffleAnswers(answers)
             };
             attempts = 0;
             displayQuestion();
@@ -224,7 +230,7 @@
             answerButtons.forEach((button, index) => {
                 button.textContent = currentQuestion.answers[index];
                 button.classList.remove('incorrect', 'disabled');
-                button.style.backgroundColor = 'gary';
+                button.style.backgroundColor = 'gray';
             });
         }
 
