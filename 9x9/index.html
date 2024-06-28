@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>99乘法遊戲</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+
+        .game-container {
+            text-align: center;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .question {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        .answers {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .answer {
+            font-size: 20px;
+            padding: 10px 20px;
+            background-color: #ff69b4;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            outline: none;
+            transition: background-color 0.3s;
+        }
+
+        .answer:hover:not(.disabled) {
+            background-color: #ff1493;
+        }
+
+        .answer.incorrect {
+            background-color: #808080;
+        }
+
+        .answer.disabled {
+            pointer-events: none;
+        }
+
+        .timer, .best-time {
+            font-size: 20px;
+            margin-top: 10px;
+        }
+
+        .progress-bar-wrapper {
+            width: 390px;
+            height: 250px;
+            position: relative;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar-wrapper img {
+            width: 100%;
+            height: 100%;
+        }
+
+        .progress-bar-container {
+            width: 45%;
+            height: 20px;
+            border-radius: 5px;
+            margin-top: 10px;
+            position: relative;
+            background-color: red;
+        }
+
+        .progress-bar {
+            height: 20px;
+            background-color: #4caf50;
+            border-radius: 5px;
+            text-align: center;
+            color: white;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .progress-bar-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            line-height: 20px;
+            font-size: 16px;
+            color: white;
+        }
+
+        .start, .restart {
+            font-size: 20px;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .start:hover, .restart:hover {
+            background-color: #218838;
+        }
+
+        .progress-bar-container.left {
+            left: 10px;
+        }
+
+        .progress-bar-container.right {
+            right: 10px;
+        }
+
+        .timer {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: transparent;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <button class="start" onclick="startGame()">開始遊戲</button>
+        <div id="game-content" style="display:none;">
+            <div id="question" class="question"></div>
+            <div class="answers">
+                <button class="answer" onclick="checkAnswer(0)"></button>
+                <button class="answer" onclick="checkAnswer(1)"></button>
+                <button class="answer" onclick="checkAnswer(2)"></button>
+            </div>
+            <div class="progress-bar-wrapper">
+                <img id="background-image" src="001.gif" alt="background">
+                <div class="progress-bar-container left">
+                    <div class="progress-bar" id="progress-bar-a" style="width: 100%;"></div>
+                    <div class="progress-bar-text">表現計量條</div>
+                </div>
+                <div class="timer" id="timer">0</div>
+                <div class="progress-bar-container right">
+                    <div class="progress-bar" id="progress-bar-b" style="width: 100%;"></div>
+                    <div class="progress-bar-text">錯誤計量條</div>
+                </div>
+            </div>
+            <div class="best-time">最快完成時間: <span id="best-time">N/A</span></div>
+            <button class="restart" onclick="restartGame()">重新開始</button>
+        </div>
+    </div>
+    <script>
+        const questionElement = document.getElementById('question');
+        const answerButtons = document.querySelectorAll('.answer');
+        const timerElement = document.getElementById('timer');
+        const bestTimeElement = document.getElementById('best-time');
+        const gameContent = document.getElementById('game-content');
+        const startButton = document.querySelector('.start');
+        const progressBarA = document.getElementById('progress-bar-a');
+        const progressBarB = document.getElementById('progress-bar-b');
+        const backgroundImage = document.getElementById('background-image');
+
+        let currentQuestion = {};
+        let timer;
+        let timeElapsed = 0;
+        let bestTime = localStorage.getItem('bestTime') || 'N/A';
+        let progressA = 100;
+        let progressB = 100;
+        let attempts = 0;
+
+        bestTimeElement.textContent = bestTime;
+
+        function generateQuestion() {
+            const num1 = Math.floor(Math.random() * 9) + 1;
+            const num2 = Math.floor(Math.random() * 9) + 1;
+            const correctAnswer = num1 * num2;
+            currentQuestion = {
+                question: `${num1} × ${num2}`,
+                correctAnswer: correctAnswer,
+                answers: shuffleAnswers([correctAnswer, generateRandomAnswer(), generateRandomAnswer()])
+            };
+            attempts = 0;
+            displayQuestion();
+            speakQuestion(`${num1} ${num2}`);
+            showQuestionAndAnswers();
+        }
+
+        function generateRandomAnswer() {
+            const num1 = Math.floor(Math.random() * 9) + 1;
+            const num2 = Math.floor(Math.random() * 9) + 1;
+            return num1 * num2;
+        }
+
+        function shuffleAnswers(answers) {
+            for (let i = answers.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [answers[i], answers[j]] = [answers[j], answers[i]];
+            }
+            return answers;
+        }
+
+        function displayQuestion() {
+            questionElement.textContent = currentQuestion.question;
+            answerButtons.forEach((button, index) => {
+                button.textContent = currentQuestion.answers[index];
+                button.classList.remove('incorrect', 'disabled');
+                button.style.backgroundColor = '#ff69b4';
+            });
+        }
+
+        function checkAnswer(index) {
+            attempts++;
+            hideQuestionAndAnswers();
+            if (currentQuestion.answers[index] === currentQuestion.correctAnswer) {
+                playSound('correct');
+                playGif('002.gif', 4000, generateQuestion);
+                if (attempts === 1) {
+                    progressA -= 5;
+                } else if (attempts === 2) {
+                    progressA -= 2;
+                }
+                if (progressA < 0) progressA = 0;
+                updateProgressBarA();
+            } else {
+                playSound('incorrect');
+                playGif('003.gif', 3000, generateQuestion);
+                progressB -= 10;
+                if (progressB < 0) progressB = 0;
+                updateProgressBarB();
+                answerButtons[index].style.backgroundColor = '#808080';
+                answerButtons[index].classList.add('disabled');
+            }
+        }
+
+        function updateProgressBarA() {
+            progressBarA.style.width = progressA + '%';
+            if (progressA <= 0) {
+                clearInterval(timer);
+                playGif('01.png', 3000, () => {
+                    if (confirm('你贏了！是否重新挑戰？')) {
+                        restartGame();
+                    }
+                });
+            }
+        }
+
+        function updateProgressBarB() {
+            progressBarB.style.width = progressB + '%';
+            if (progressB <= 0) {
+                clearInterval(timer);
+                playGif('02.png', 3000, () => {
+                    if (confirm('你失敗了！是否重新挑戰？')) {
+                        restartGame();
+                    }
+                });
+            }
+        }
+
+        function speakQuestion(question) {
+            const msg = new SpeechSynthesisUtterance(question);
+            msg.lang = 'zh-TW';
+            msg.rate = 0.8;  // 放慢語速
+            window.speechSynthesis.speak(msg);
+        }
+
+        function playSound(type) {
+            const audio = new Audio(type === 'correct' ? 'correct.mp3' : 'incorrect.mp3');
+            audio.play();
+        }
+
+        function playGif(src, duration, callback) {
+            backgroundImage.src = src;
+            setTimeout(() => {
+                if (src !== '01.png' && src !== '02.png') {
+                    backgroundImage.src = '001.gif';
+                }
+                if (callback) callback();
+            }, duration);
+        }
+
+        function hideQuestionAndAnswers() {
+            questionElement.style.visibility = 'hidden';
+            answerButtons.forEach(button => button.style.visibility = 'hidden');
+        }
+
+        function showQuestionAndAnswers() {
+            questionElement.style.visibility = 'visible';
+            answerButtons.forEach(button => button.style.visibility = 'visible');
+        }
+
+        function startTimer() {
+            timeElapsed = 0;
+            timer = setInterval(() => {
+                timeElapsed++;
+                timerElement.textContent = timeElapsed;
+            }, 1000);
+        }
+
+        function startGame() {
+            startButton.style.display = 'none';
+            gameContent.style.display = 'block';
+            restartGame();
+        }
+
+        function restartGame() {
+            clearInterval(timer);
+            startTimer();
+            progressA = 100;
+            progressB = 100;
+            updateProgressBarA();
+            updateProgressBarB();
+            generateQuestion();
+        }
+    </script>
+</body>
+</html>
