@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Pixel Maker100</title>
+    <title>圖像編輯與導出</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -15,13 +15,13 @@
         }
         .grid {
             display: grid;
-            grid-template-columns: repeat(100, 10px); /* 缩小格子尺寸 */
-            grid-template-rows: repeat(100, 10px);   /* 缩小格子尺寸 */
+            grid-template-columns: repeat(100, 4px);
+            grid-template-rows: repeat(100, 4px);
             gap: 1px;
         }
         .cell {
-            width: 10px; /* 缩小格子尺寸 */
-            height: 10px; /* 缩小格子尺寸 */
+            width: 4px;
+            height: 4px;
             border: 1px solid #ddd;
             cursor: pointer;
         }
@@ -52,18 +52,40 @@
     </style>
 </head>
 <body>
-    <input type="file" id="fileInput" accept="image/bmp">
+    <input type="file" id="fileInput" accept="image/bmp, image/png">
     <div class="toolbar">
         <button onclick="loadImage()">加載並編輯圖像</button>
     </div>
     <div class="grid" id="grid"></div>
     <div class="controls">
-        <button onclick="convertTo01()">導出01格式</button>
+        <button onclick="convertToGrayscaleNumbers()">導出灰階數字格式</button>
         <button onclick="copyText()">複製文本</button>
     </div>
     <pre id="output"></pre>
 
     <script>
+        const colorMap = {
+            '0,0,0': 'a',
+            '127,127,127': 'b',
+            '136,0,21': 'c',
+            '237,28,36': 'd',
+            '255,127,39': 'e',
+            '255,242,0': 'f',
+            '34,177,76': 'g',
+            '0,162,232': 'h',
+            '63,72,204': 'i',
+            '163,73,164': 'j',
+            '195,195,195': 'k',
+            '185,122,87': 'l',
+            '255,174,201': 'm',
+            '255,201,14': 'n',
+            '239,228,176': 'o',
+            '181,230,29': 'p',
+            '153,217,234': 'q',
+            '112,146,190': 'r',
+            '200,191,231': 's'
+        };
+
         function loadImage() {
             const fileInput = document.getElementById('fileInput');
             if (fileInput.files.length === 0) {
@@ -78,9 +100,9 @@
                 img.onload = function () {
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
-                    canvas.width = 100;  // 更新为100x100
-                    canvas.height = 100; // 更新为100x100
-                    ctx.drawImage(img, 0, 0, 100, 100); // 缩放图像到100x100
+                    canvas.width = 100;
+                    canvas.height = 100;
+                    ctx.drawImage(img, 0, 0, 100, 100);
                     const imageData = ctx.getImageData(0, 0, 100, 100);
                     createEditableGrid(imageData.data);
                 };
@@ -92,29 +114,34 @@
         function createEditableGrid(data) {
             const grid = document.getElementById('grid');
             grid.innerHTML = '';
-            for (let i = 0; i < 100; i++) {  // 更新循环到100
-                for (let j = 0; j < 100; j++) {  // 更新循环到100
-                    const index = 4 * (i * 100 + j);  // 更新索引计算
-                    const brightness = 0.299 * data[index] + 0.587 * data[index + 1] + 0.114 * data[index + 2];
+            for (let i = 0; i < 100; i++) {
+                for (let j = 0; j < 100; j++) {
+                    const index = 4 * (i * 100 + j);
+                    const colorKey = `${data[index]},${data[index + 1]},${data[index + 2]}`;
                     const cell = document.createElement('div');
                     cell.className = 'cell';
-                    cell.style.backgroundColor = brightness <= 128 ? 'black' : 'white';
-                    cell.onclick = function() { this.style.backgroundColor = this.style.backgroundColor === 'black' ? 'white' : 'black'; };
+                    cell.style.backgroundColor = `rgb(${data[index]}, ${data[index + 1]}, ${data[index + 2]})`;
+                    cell.dataset.color = colorKey;
+                    cell.dataset.number = colorMap[colorKey] || '0';
+                    cell.onclick = function() {
+                        this.style.backgroundColor = this.style.backgroundColor === 'black' ? 'white' : 'black';
+                    };
                     grid.appendChild(cell);
                 }
             }
         }
 
-        function convertTo01() {
+        function convertToGrayscaleNumbers() {
             const cells = document.querySelectorAll('.cell');
             let output = '';
-            for (let i = 0; i < 100; i++) {  // 更新循环到100
+            for (let i = 0; i < 100; i++) {
                 let line = ' '.repeat(16) + `'`;
-                for (let j = 0; j < 100; j++) {  // 更新循环到100
-                    line += cells[i * 100 + j].style.backgroundColor === 'black' ? '1' : '0'; // 更新索引计算
+                for (let j = 0; j < 100; j++) {
+                    const number = cells[i * 100 + j].dataset.number;
+                    line += number;
                 }
                 line += `'`;
-                output += line + (i < 99 ? ',\n' : '');  // 更新判断条件
+                output += line + (i < 99 ? ',\n' : '');
             }
             document.getElementById('output').textContent = output;
         }
