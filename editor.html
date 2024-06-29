@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文檔編輯器</title>
+    <style>
+        body, html {
+            background-color: #F2F2F2;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+        #inputContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        textarea {
+            width: 400px;
+            height: 100px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="inputContainer">
+        <textarea id="topInput" placeholder="要寫入的內容"></textarea>
+        <button id="pasteButton">貼上剪貼簿內容</button>
+        <button id="clearButton">清除</button>
+        
+        <textarea id="bottomInput" placeholder="要修改的內容"></textarea>
+        <button id="copyButton">複製修改後的內容</button>
+        <button id="resetButton">重置</button>
+    </div>
+
+    <script>
+        const topInput = document.getElementById('topInput');
+        const bottomInput = document.getElementById('bottomInput');
+
+        document.getElementById('pasteButton').addEventListener('click', () => {
+            navigator.clipboard.readText().then(text => {
+                topInput.value = text;
+            }).catch(err => {
+                alert('無法讀取剪貼簿內容: ' + err);
+            });
+        });
+
+        document.getElementById('clearButton').addEventListener('click', () => {
+            topInput.value = '';
+        });
+
+        document.getElementById('copyButton').addEventListener('click', () => {
+            const replacedText = bottomInput.value.replace(/\/fix\//g, topInput.value);
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = replacedText;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextArea);
+            alert('修改後的內容已複製到剪貼簿');
+        });
+
+        document.getElementById('resetButton').addEventListener('click', () => {
+            bottomInput.value = '';
+            localStorage.removeItem('bottomInputContent');
+        });
+
+        // 加載存儲在localStorage中的內容
+        window.addEventListener('load', () => {
+            const savedContent = localStorage.getItem('bottomInputContent');
+            if (savedContent) {
+                bottomInput.value = savedContent;
+            }
+        });
+
+        // 保存內容到localStorage中
+        bottomInput.addEventListener('input', () => {
+            localStorage.setItem('bottomInputContent', bottomInput.value);
+        });
+    </script>
+</body>
+</html>
