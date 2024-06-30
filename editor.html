@@ -40,15 +40,17 @@
         <textarea id="topInput" placeholder="要寫入的內容"></textarea>
         <button id="pasteButton">貼上剪貼簿內容</button>
         <button id="clearButton">清除</button>
+        <button id="convertButton">轉換</button>
+        <button id="copyConvertedButton">複製轉換後的內容</button>
         
         <textarea id="bottomInput" placeholder="要修改的內容"></textarea>
-        <button id="copyButton">複製修改後的內容</button>
         <button id="resetButton">重置</button>
     </div>
 
     <script>
         const topInput = document.getElementById('topInput');
         const bottomInput = document.getElementById('bottomInput');
+        const copyConvertedButton = document.getElementById('copyConvertedButton');
 
         document.getElementById('pasteButton').addEventListener('click', () => {
             navigator.clipboard.readText().then(text => {
@@ -62,15 +64,19 @@
             topInput.value = '';
         });
 
-        document.getElementById('copyButton').addEventListener('click', () => {
+        document.getElementById('convertButton').addEventListener('click', () => {
             const replacedText = bottomInput.value.replace(/\/fix\//g, topInput.value);
+            topInput.value = replacedText;
+        });
+
+        document.getElementById('copyConvertedButton').addEventListener('click', () => {
             const tempTextArea = document.createElement('textarea');
-            tempTextArea.value = replacedText;
+            tempTextArea.value = topInput.value;
             document.body.appendChild(tempTextArea);
             tempTextArea.select();
             document.execCommand('copy');
             document.body.removeChild(tempTextArea);
-            alert('修改後的內容已複製到剪貼簿');
+            alert('轉換後的內容已複製到剪貼簿');
         });
 
         document.getElementById('resetButton').addEventListener('click', () => {
