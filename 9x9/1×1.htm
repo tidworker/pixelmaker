@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>99乘法遊戲</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+        }
+        .question {
+            font-size: 24px;
+            margin: 20px 0;
+        }
+        .options {
+            display: flex;
+            justify-content: space-around;
+            width: 300px;
+            margin-bottom: 20px;
+        }
+        .options button {
+            padding: 10px 20px;
+            font-size: 18px;
+        }
+        .timer {
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="question" id="question"></div>
+    <div class="options" id="options"></div>
+    <div class="timer" id="timer">時間：<span id="time">0</span>秒</div>
+
+    <script>
+        let currentMultiplicand = 1;
+        let currentMultiplier = 1;
+        let startTime = Date.now();
+        let penaltyTime = 0;
+
+        function updateQuestion() {
+            if (currentMultiplicand > 9) {
+                clearInterval(timerInterval);
+                let totalTime = ((Date.now() - startTime) / 1000) + penaltyTime;
+                alert(`完成！總時間：${totalTime.toFixed(2)}秒`);
+                return;
+            }
+
+            document.getElementById('question').textContent = `${currentMultiplicand} × ${currentMultiplier} = ?`;
+            let correctAnswer = currentMultiplicand * currentMultiplier;
+            let options = generateOptions(correctAnswer);
+            renderOptions(options, correctAnswer);
+        }
+
+        function generateOptions(correctAnswer) {
+            let options = new Set([correctAnswer]);
+            while (options.size < 3) {
+                let randomOption = Math.floor(Math.random() * 81) + 1;
+                options.add(randomOption);
+            }
+            return Array.from(options).sort(() => Math.random() - 0.5);
+        }
+
+        function renderOptions(options, correctAnswer) {
+            let optionsContainer = document.getElementById('options');
+            optionsContainer.innerHTML = '';
+            options.forEach(option => {
+                let button = document.createElement('button');
+                button.textContent = option;
+                button.onclick = () => handleOptionClick(option, correctAnswer);
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        function handleOptionClick(selectedOption, correctAnswer) {
+            if (selectedOption === correctAnswer) {
+                if (currentMultiplier < 9) {
+                    currentMultiplier++;
+                } else {
+                    currentMultiplicand++;
+                    currentMultiplier = 1;
+                }
+                updateQuestion();
+            } else {
+                penaltyTime += 3;
+                alert('答錯了，增加3秒懲罰時間');
+            }
+        }
+
+        function startTimer() {
+            let timerElement = document.getElementById('time');
+            timerInterval = setInterval(() => {
+                let elapsedTime = ((Date.now() - startTime) / 1000) + penaltyTime;
+                timerElement.textContent = elapsedTime.toFixed(2);
+            }, 100);
+        }
+
+        updateQuestion();
+        startTimer();
+    </script>
+</body>
+</html>
