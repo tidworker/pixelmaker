@@ -25,21 +25,28 @@
         }
         .options {
             display: flex;
-            flex-direction: column;
+            justify-content: space-around;
             margin-bottom: 20px;
         }
         .options button {
-            padding: 15px 30px;
-            font-size: 36px;
+            width: 30%;
+            padding-top: 30%;
+            font-size: 24px;
             border: 2px solid #ff66b2;
             border-radius: 10px;
             background-color: #ffffff;
             color: #ff66b2;
             cursor: pointer;
-            margin: 10px 0;
+            position: relative;
         }
         .options button:hover {
             background-color: #ffccdf;
+        }
+        .options button span {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
         }
         .timer {
             font-size: 24px;
@@ -64,7 +71,6 @@
     </style>
 </head>
 <body>
-    <br><br><br><br>
     <div class="container">
         <div class="control-buttons">
             <button id="startButton">開始</button>
@@ -135,7 +141,9 @@
             optionsContainer.innerHTML = '';
             options.forEach(option => {
                 let button = document.createElement('button');
-                button.textContent = option;
+                let span = document.createElement('span');
+                span.textContent = option;
+                button.appendChild(span);
                 button.onclick = () => handleOptionClick(option, correctAnswer);
                 optionsContainer.appendChild(button);
             });
@@ -152,7 +160,7 @@
                 updateQuestion();
             } else {
                 penaltyTime += 3;
-                alert('答錯了，繼續加油吧');
+                alert('答錯了，增加3秒懲罰時間');
             }
         }
 
