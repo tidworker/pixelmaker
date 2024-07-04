@@ -11,41 +11,49 @@
             font-family: Arial, sans-serif;
             background-color: #ffe6f0;
             color: #ff66b2;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
         }
         .question {
-            font-size: 50px;
+            font-size: 36px;
             margin: 20px 0;
         }
         .options {
             display: flex;
             justify-content: space-around;
-            width: 100%;
-            max-width: 400px;
             margin-bottom: 20px;
         }
         .options button {
             padding: 10px 20px;
-            font-size: 20px;
+            font-size: 18px;
             border: 2px solid #ff66b2;
-            border-radius: 5px;
+            border-radius: 10px;
             background-color: #ffffff;
             color: #ff66b2;
             cursor: pointer;
+            flex: 1;
+            margin: 0 5px;
         }
         .options button:hover {
             background-color: #ffccdf;
         }
         .timer {
-            font-size: 20px;
+            font-size: 18px;
+            margin: 10px 0;
         }
         .control-buttons {
-            margin: 20px;
+            margin: 20px 0;
         }
         .control-buttons button {
             padding: 10px 20px;
-            font-size: 20px;
+            font-size: 18px;
             border: 2px solid #ff66b2;
-            border-radius: 5px;
+            border-radius: 10px;
             background-color: #ffffff;
             color: #ff66b2;
             cursor: pointer;
@@ -57,14 +65,15 @@
     </style>
 </head>
 <body>
-    <br><br><br>
-    <div class="control-buttons">
-        <button id="startButton">開始</button>
-        <button id="resetButton">重新開始</button>
+    <div class="container">
+        <div class="control-buttons">
+            <button id="startButton">開始</button>
+            <button id="resetButton">重新開始</button>
+        </div>
+        <div class="question" id="question"></div>
+        <div class="options" id="options"></div>
+        <div class="timer" id="timer">時間：<span id="time">0</span>秒</div>
     </div>
-    <div class="question" id="question"></div>
-    <div class="options" id="options"></div>
-    <div class="timer" id="timer">時間：<span id="time">0</span>秒</div>
 
     <script>
         let currentMultiplicand = 1;
@@ -143,7 +152,7 @@
                 updateQuestion();
             } else {
                 penaltyTime += 3;
-                alert('答錯了，沒關係繼續加油喔');
+                alert('答錯了，繼續加油吧');
             }
         }
 
