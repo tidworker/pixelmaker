@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>九九乘法對戰遊戲</title>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .game-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .player-container {
+            width: 100%;
+            height: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .player1 {
+            transform: rotate(180deg);
+        }
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            width: 200px;
+        }
+        .button {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #ccc;
+            border: 1px solid #000;
+            cursor: pointer;
+        }
+        .question, .options, .timer, .health-bar-container {
+            margin: 10px;
+        }
+        .options {
+            display: flex;
+            justify-content: center;
+        }
+        .option {
+            margin: 0 10px;
+            padding: 10px;
+            background-color: #eee;
+            border: 1px solid #000;
+            cursor: pointer;
+        }
+        .prompt {
+            font-weight: bold;
+        }
+        .health-bar-container {
+            width: 100px;
+            height: 20px;
+            background-color: #ddd;
+            border: 1px solid #000;
+        }
+        .health-bar {
+            height: 100%;
+            background-color: green;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div id="player1-container" class="player-container player1">
+            <div id="player1-prompt" class="prompt"></div>
+            <div class="health-bar-container">
+                <div id="player1-health-bar" class="health-bar"></div>
+            </div>
+            <div id="player1-buttons" class="buttons"></div>
+            <div id="player1-question" class="question"></div>
+            <div id="player1-options" class="options"></div>
+            <div id="player1-timer" class="timer"></div>
+        </div>
+        <div id="player2-container" class="player-container player2">
+            <div id="player2-question" class="question"></div>
+            <div id="player2-options" class="options"></div>
+            <div id="player2-buttons" class="buttons"></div>
+            <div id="player2-timer" class="timer"></div>
+            <div class="health-bar-container">
+                <div id="player2-health-bar" class="health-bar"></div>
+            </div>
+            <div id="player2-prompt" class="prompt"></div>
+        </div>
+    </div>
+    <script>
+        const player1Prompt = document.getElementById('player1-prompt');
+        const player1Buttons = document.getElementById('player1-buttons');
+        const player1Question = document.getElementById('player1-question');
+        const player1Options = document.getElementById('player1-options');
+        const player1Timer = document.getElementById('player1-timer');
+        const player1HealthBar = document.getElementById('player1-health-bar');
+        const player2Prompt = document.getElementById('player2-prompt');
+        const player2Buttons = document.getElementById('player2-buttons');
+        const player2Question = document.getElementById('player2-question');
+        const player2Options = document.getElementById('player2-options');
+        const player2Timer = document.getElementById('player2-timer');
+        const player2HealthBar = document.getElementById('player2-health-bar');
+
+        let player1Score = 10;
+        let player2Score = 10;
+        const maxScore = 10;
+        let isPlayer1Turn = true;
+        let timer;
+        let countdownInterval;
+        let elapsedSeconds = 0;
+
+        function initializeButtons(container, player) {
+            container.innerHTML = '';
+            for (let i = 1; i <= 9; i++) {
+                const button = document.createElement('div');
+                button.textContent = i;
+                button.className = 'button';
+                button.addEventListener('click', () => handleNumberButtonClick(i, player));
+                container.appendChild(button);
+            }
+        }
+
+        initializeButtons(player1Buttons, 'player1');
+        player1Prompt.textContent = '請出題';
+
+        let selectedNumbers = [];
+
+        function handleNumberButtonClick(number, player) {
+            if (selectedNumbers.length < 2) {
+                selectedNumbers.push(number);
+                if (selectedNumbers.length === 2) {
+                    generateQuestion(player);
+                }
+            }
+        }
+
+        function generateQuestion(player) {
+            const [num1, num2] = selectedNumbers;
+            const correctAnswer = num1 * num2;
+            const options = generateOptions(correctAnswer);
+            if (player === 'player1') {
+                player2Question.textContent = `${num1} × ${num2}`;
+                player2Options.innerHTML = '';
+                options.forEach(option => {
+                    const optionDiv = document.createElement('div');
+                    optionDiv.textContent = option;
+                    optionDiv.className = 'option';
+                    optionDiv.addEventListener('click', () => handleOptionClick(option, correctAnswer, 'player2'));
+                    player2Options.appendChild(optionDiv);
+                });
+                player1Prompt.textContent = '';
+                player2Prompt.textContent = '';
+                player1Buttons.innerHTML = '';
+                startTimer('player2');
+            } else {
+                player1Question.textContent = `${num1} × ${num2}`;
+                player1Options.innerHTML = '';
+                options.forEach(option => {
+                    const optionDiv = document.createElement('div');
+                    optionDiv.textContent = option;
+                    optionDiv.className = 'option';
+                    optionDiv.addEventListener('click', () => handleOptionClick(option, correctAnswer, 'player1'));
+                    player1Options.appendChild(optionDiv);
+                });
+                player2Prompt.textContent = '';
+                player1Prompt.textContent = '';
+                player2Buttons.innerHTML = '';
+                startTimer('player1');
+            }
+            selectedNumbers = [];
+        }
+
+        function generateOptions(correctAnswer) {
+            const options = [correctAnswer];
+            while (options.length < 3) {
+                const randomOption = Math.floor(Math.random() * 81) + 1;
+                if (!options.includes(randomOption)) {
+                    options.push(randomOption);
+                }
+            }
+            return options.sort(() => Math.random() - 0.5);
+        }
+
+        function handleOptionClick(selectedOption, correctAnswer, player) {
+            clearTimeout(timer);
+            clearInterval(countdownInterval);
+            if (selectedOption === correctAnswer) {
+                showAlert('答對了！交換出題');
+                setTimeout(swapRoles, 1000);
+            } else {
+                showAlert('答錯了！扣3分');
+                if (player === 'player2') {
+                    player2Score -= 3;
+                    updateHealthBar('player2');
+                    if (player2Score <= 0) {
+                        alert('玩家2失敗！');
+                        resetGame();
+                    }
+                } else {
+                    player1Score -= 3;
+                    updateHealthBar('player1');
+                    if (player1Score <= 0) {
+                        alert('玩家1失敗！');
+                        resetGame();
+                    }
+                }
+                swapRoles();
+            }
+        }
+
+        function startTimer(player) {
+            elapsedSeconds = 0;
+            updateTimer(player, elapsedSeconds);
+            countdownInterval = setInterval(() => {
+                elapsedSeconds++;
+                updateTimer(player, elapsedSeconds);
+                deductHealth(player, 1);
+            }, 1000);
+        }
+
+        function updateTimer(player, elapsedSeconds) {
+            if (player === 'player1') {
+                player1Timer.textContent = `計時: ${elapsedSeconds}秒`;
+            } else {
+                player2Timer.textContent = `計時: ${elapsedSeconds}秒`;
+            }
+        }
+
+        function deductHealth(player, amount) {
+            if (player === 'player1') {
+                player1Score -= amount;
+                if (player1Score < 0) player1Score = 0;
+                updateHealthBar('player1');
+                if (player1Score <= 0) {
+                    alert('玩家1失敗！');
+                    resetGame();
+                }
+            } else {
+                player2Score -= amount;
+                if (player2Score < 0) player2Score = 0;
+                updateHealthBar('player2');
+                if (player2Score <= 0) {
+                    alert('玩家2失敗！');
+                    resetGame();
+                }
+            }
+        }
+
+        function updateHealthBar(player) {
+            if (player === 'player1') {
+                player1HealthBar.style.width = `${(player1Score / maxScore) * 100}%`;
+            } else {
+                player2HealthBar.style.width = `${(player2Score / maxScore) * 100}%`;
+            }
+        }
+
+        function showAlert(message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.textContent = message;
+            document.body.appendChild(alertDiv);
+            setTimeout(() => {
+                document.body.removeChild(alertDiv);
+            }, 1000);
+        }
+
+        function swapRoles() {
+            isPlayer1Turn = !isPlayer1Turn;
+            if (isPlayer1Turn) {
+                initializeButtons(player1Buttons, 'player1');
+                player1Prompt.textContent = '請出題';
+                player1Question.textContent = '';
+                player1Options.innerHTML = '';
+                player1Timer.textContent = '';
+                player2Question.textContent = '';
+                player2Options.innerHTML = '';
+                player2Timer.textContent = '';
+                player2Buttons.innerHTML = '';
+            } else {
+                initializeButtons(player2Buttons, 'player2');
+                player2Prompt.textContent = '請出題';
+                player2Question.textContent = '';
+                player2Options.innerHTML = '';
+                player2Timer.textContent = '';
+                player1Question.textContent = '';
+                player1Options.innerHTML = '';
+                player1Timer.textContent = '';
+                player1Buttons.innerHTML = '';
+            }
+        }
+
+        function resetGame() {
+            player1Score = 10;
+            player2Score = 10;
+            selectedNumbers = [];
+            isPlayer1Turn = true;
+            initializeButtons(player1Buttons, 'player1');
+            player1Prompt.textContent = '請出題';
+            player1Question.textContent = '';
+            player1Options.innerHTML = '';
+            player1Timer.textContent = '';
+            player1HealthBar.style.width = '100%';
+            player2Question.textContent = '';
+            player2Options.innerHTML = '';
+            player2Timer.textContent = '';
+            player2HealthBar.style.width = '100%';
+            clearTimeout(timer);
+            clearInterval(countdownInterval);
+        }
+
+        function initializeGame() {
+            resetGame();
+        }
+
+        initializeGame();
+    </script>
+</body>
+</html>
