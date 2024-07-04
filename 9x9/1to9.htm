@@ -9,6 +9,8 @@
             flex-direction: column;
             align-items: center;
             font-family: Arial, sans-serif;
+            background-color: #ffe6f0;
+            color: #ff66b2;
         }
         .question {
             font-size: 50px;
@@ -17,20 +19,49 @@
         .options {
             display: flex;
             justify-content: space-around;
-            width: 300px;
+            width: 100%;
+            max-width: 400px;
             margin-bottom: 20px;
         }
         .options button {
             padding: 10px 20px;
             font-size: 20px;
+            border: 2px solid #ff66b2;
+            border-radius: 10px;
+            background-color: #ffffff;
+            color: #ff66b2;
+            cursor: pointer;
+        }
+        .options button:hover {
+            background-color: #ffccdf;
         }
         .timer {
             font-size: 20px;
+        }
+        .control-buttons {
+            margin: 20px;
+        }
+        .control-buttons button {
+            padding: 10px 20px;
+            font-size: 20px;
+            border: 2px solid #ff66b2;
+            border-radius: 10px;
+            background-color: #ffffff;
+            color: #ff66b2;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+        .control-buttons button:hover {
+            background-color: #ffccdf;
         }
     </style>
 </head>
 <body>
     <br><br><br>
+    <div class="control-buttons">
+        <button id="startButton">開始</button>
+        <button id="resetButton">重新開始</button>
+    </div>
     <div class="question" id="question"></div>
     <div class="options" id="options"></div>
     <div class="timer" id="timer">時間：<span id="time">0</span>秒</div>
@@ -38,14 +69,40 @@
     <script>
         let currentMultiplicand = 1;
         let currentMultiplier = 1;
-        let startTime = Date.now();
+        let startTime = 0;
         let penaltyTime = 0;
+        let timerInterval;
+        let gameStarted = false;
+
+        document.getElementById('startButton').addEventListener('click', startGame);
+        document.getElementById('resetButton').addEventListener('click', resetGame);
+
+        function startGame() {
+            if (!gameStarted) {
+                gameStarted = true;
+                startTime = Date.now();
+                penaltyTime = 0;
+                currentMultiplicand = 1;
+                currentMultiplier = 1;
+                updateQuestion();
+                startTimer();
+            }
+        }
+
+        function resetGame() {
+            gameStarted = false;
+            clearInterval(timerInterval);
+            document.getElementById('question').textContent = '';
+            document.getElementById('options').innerHTML = '';
+            document.getElementById('time').textContent = '0';
+        }
 
         function updateQuestion() {
             if (currentMultiplicand > 9) {
                 clearInterval(timerInterval);
                 let totalTime = ((Date.now() - startTime) / 1000) + penaltyTime;
                 alert(`完成！總時間：${totalTime.toFixed(2)}秒`);
+                gameStarted = false;
                 return;
             }
 
@@ -97,9 +154,6 @@
                 timerElement.textContent = elapsedTime.toFixed(2);
             }, 100);
         }
-
-        updateQuestion();
-        startTimer();
     </script>
 </body>
 </html>
