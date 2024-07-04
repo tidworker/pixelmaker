@@ -48,6 +48,11 @@
             left: 50%;
             transform: translate(-50%, -50%);
         }
+        .options button.incorrect {
+            background-color: #dddddd;
+            color: #aaaaaa;
+            cursor: not-allowed;
+        }
         .timer {
             font-size: 36px;
             margin: 10px 0;
@@ -89,6 +94,9 @@
         
         <div class="timer" id="timer">時間：<span id="time">0</span>秒</div>
     </div>
+
+    <audio id="correctSound" src="correct.mp3"></audio>
+    <audio id="incorrectSound" src="incorrect.mp3"></audio>
 
     <script>
         let currentMultiplicand = 1;
@@ -153,13 +161,14 @@
                 let span = document.createElement('span');
                 span.textContent = option;
                 button.appendChild(span);
-                button.onclick = () => handleOptionClick(option, correctAnswer);
+                button.onclick = () => handleOptionClick(button, option, correctAnswer);
                 optionsContainer.appendChild(button);
             });
         }
 
-        function handleOptionClick(selectedOption, correctAnswer) {
+        function handleOptionClick(button, selectedOption, correctAnswer) {
             if (selectedOption === correctAnswer) {
+                document.getElementById('correctSound').play();
                 if (currentMultiplier < 9) {
                     currentMultiplier++;
                 } else {
@@ -168,8 +177,9 @@
                 }
                 updateQuestion();
             } else {
+                document.getElementById('incorrectSound').play();
                 penaltyTime += 3;
-                alert('答錯了，繼續加油吧');
+                button.classList.add('incorrect');
             }
         }
 
