@@ -40,6 +40,12 @@
     button:hover {
       background-color: #45a049;
     }
+    /* 提示訊息樣式 */
+    .message {
+      margin-top: 20px;
+      font-size: 16px;
+      color: green;
+    }
   </style>
 </head>
 <body>
@@ -60,6 +66,9 @@
 
   <button onclick="savePlayerNames()">儲存設定</button>
 
+  <!-- 提示訊息 -->
+  <div class="message" id="saveMessage"></div>
+
   <script>
     // 載入現有資料 (若有)
     window.onload = function() {
@@ -74,13 +83,24 @@
 
     function savePlayerNames() {
       const names = [
-        document.getElementById('player1').value || '玩家1',
-        document.getElementById('player2').value || '玩家2',
-        document.getElementById('player3').value || '玩家3',
-        document.getElementById('player4').value || '玩家4',
+        document.getElementById('player1').value.trim() || '玩家1',
+        document.getElementById('player2').value.trim() || '玩家2',
+        document.getElementById('player3').value.trim() || '玩家3',
+        document.getElementById('player4').value.trim() || '玩家4',
       ];
       localStorage.setItem('mahjongPlayerNames', JSON.stringify(names));
-      alert('玩家名稱已儲存！');
+      
+      // 顯示提示訊息
+      const messageDiv = document.getElementById('saveMessage');
+      messageDiv.textContent = '玩家名稱已儲存！';
+      
+      // 自動刷新上方的 p1.html iframe
+      if (window.parent && window.parent.document) {
+        const p1Frame = window.parent.document.getElementById('p1Frame');
+        if (p1Frame) {
+          p1Frame.contentWindow.location.reload();
+        }
+      }
     }
   </script>
 </body>
