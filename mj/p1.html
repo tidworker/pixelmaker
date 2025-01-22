@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>麻將計分軟體</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background-color: #f2f2f2;
+    }
+    h1 {
+      color: #333;
+    }
+    .info {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #333;
+    }
+    .players {
+      margin: 20px 0;
+    }
+    .players button {
+      width: 150px;
+      height: 60px;
+      margin: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      position: relative;
+    }
+    .players button:hover {
+      background-color: #45a049;
+    }
+    .dealer-label {
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      background-color: gold;
+      color: black;
+      padding: 2px 5px;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    /* Modal Styles */
+    .modal {
+      display: none; /* Hidden by default */
+      position: fixed; 
+      z-index: 1; 
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto; 
+      background-color: rgba(0, 0, 0, 0.4); 
+    }
+    .modal-content, .confirmation-content {
+      background-color: #fefefe;
+      margin: 10% auto; 
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 400px; 
+      border-radius: 10px;
+      text-align: center;
+    }
+    .modal-content button,
+    .confirmation-content button {
+      width: 100px;
+      height: 40px;
+      margin: 10px;
+      font-size: 14px;
+      border-radius: 5px;
+      border: none;
+      background-color: #2196F3;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .modal-content button:hover:not(.disabled),
+    .confirmation-content button:hover:not(.disabled) {
+      background-color: #0b7dda;
+    }
+    .modal-content button.disabled,
+    .confirmation-content button.disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    .modal-content .cancel-button,
+    .confirmation-content .cancel-button {
+      background-color: #f44336;
+    }
+    .modal-content .cancel-button:hover,
+    .confirmation-content .cancel-button:hover {
+      background-color: #da190b;
+    }
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .scores {
+      margin-top: 30px;
+      text-align: left;
+      display: inline-block;
+    }
+    .scores table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    .scores th,
+    .scores td {
+      border: 1px solid #ddd;
+      padding: 8px;
+    }
+    .scores th {
+      background-color: #4CAF50;
+      color: white;
+    }
+    /* Points Input Styles */
+    .points-input-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-top: 20px;
+    }
+    .points-input-container button {
+      width: 40px;
+      height: 40px;
+      font-size: 20px;
+      background-color: #555;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .points-input-container button:hover {
+      background-color: #333;
+    }
+    .points-input-container input {
+      width: 80px;
+      height: 40px;
+      font-size: 18px;
+      text-align: center;
+      margin: 0 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .points-input-container input:focus {
+      outline: none;
+      border-color: #4CAF50;
+    }
+    /* Reset Button */
+    .reset-button {
+      background-color: #f44336;
+      color: white;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .reset-button:hover {
+      background-color: #da190b;
+    }
+    /* 顯示「莊家台」與「自摸台」資訊的區域 */
+    .bonus-info {
+      margin-top: 10px;
+      font-size: 16px;
+      color: #555;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <h1>麻將計分軟體</h1>
+
+  <div class="info">
+    <p>目前連莊次數：<span id="dealerStreak">無</span></p>
+    <p>莊家台數：<span id="dealerBonus">1</span></p>
+  </div>
+
+  <div class="players">
+    <button onclick="playerClicked(1)">
+      玩家 1
+      <span class="dealer-label">莊</span>
+    </button>
+    <button onclick="playerClicked(2)">玩家 2</button>
+    <button onclick="playerClicked(3)">玩家 3</button>
+    <button onclick="playerClicked(4)">玩家 4</button>
+  </div>
+
+  <!-- Reset Game Button -->
+  <div class="info">
+    <button class="reset-button" onclick="resetGame()">重置遊戲</button>
+  </div>
+
+  <!-- Win Type Modal -->
+  <div id="winTypeModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('winTypeModal')">&times;</span>
+      <h2>選擇胡牌方式</h2>
+      <button onclick="selectWinType('自摸')">自摸</button>
+      <button onclick="selectWinType('吃胡')">吃胡</button>
+      <button class="cancel-button" onclick="closeModal('winTypeModal')">取消</button>
+    </div>
+  </div>
+
+  <!-- Loser Selection Modal -->
+  <div id="loserModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('loserModal')">&times;</span>
+      <h2>選擇放槍的玩家</h2>
+      <div id="loserButtons">
+        <!-- 動態生成輸家按鈕 -->
+      </div>
+      <button class="cancel-button" onclick="closeModal('loserModal')">取消</button>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmationModal" class="modal">
+    <div class="confirmation-content">
+      <h2 id="confirmationMessage">確定選擇？</h2>
+      <button onclick="confirmSelection()">確定</button>
+      <button class="cancel-button" onclick="closeModal('confirmationModal')">取消</button>
+    </div>
+  </div>
+
+  <!-- Points Input Modal -->
+  <div id="pointsModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('pointsModal')">&times;</span>
+      <h2>輸入台數</h2>
+
+      <!-- 顯示「莊家台」與「自摸台」的區域 -->
+      <div class="bonus-info" id="bonusInfo"></div>
+
+      <div class="points-input-container">
+        <button onclick="decreasePoints()">-</button>
+        <input type="number" id="pointsInput" min="0" value="0" placeholder="台數">
+        <button onclick="increasePoints()">+</button>
+      </div>
+      <br />
+      <button onclick="confirmPoints()">確定</button>
+    </div>
+  </div>
+
+  <!-- Scores Display -->
+  <div class="scores">
+    <h2>目前分數</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>玩家</th>
+          <th>分數</th>
+        </tr>
+      </thead>
+      <tbody id="scoresTable">
+        <tr><td>玩家 1</td><td id="score1">0</td></tr>
+        <tr><td>玩家 2</td><td id="score2">0</td></tr>
+        <tr><td>玩家 3</td><td id="score3">0</td></tr>
+        <tr><td>玩家 4</td><td id="score4">0</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    // 常數定義
+    const DEALER = 1; // 玩家 1 為莊家
+
+    // 初始分數
+    const scores = {
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0
+    };
+
+    // 當前選中的贏家
+    let currentWinner = null;
+    // 當前選中的輸家（僅吃胡時）
+    let currentLoser = null;
+    // 當前選擇的胡牌方式
+    let currentWinType = null;
+
+    // 用於暫存選擇的輸家
+    let tempLoser = null;
+
+    // 連莊次數 (基數)
+    let dealerStreak = 0; // 初始為0
+
+    // 更新莊家信息（連莊次數與莊家台數）
+    function updateDealerInfo() {
+      const dealerStreakElement = document.getElementById('dealerStreak');
+      const dealerBonusElement = document.getElementById('dealerBonus');
+
+      // 計算莊家台數 => (dealerStreak * 2) + 1
+      const bonus = (dealerStreak * 2) + 1;
+      dealerBonusElement.innerText = bonus;
+
+      // 顯示連莊次數
+      if (dealerStreak === 0) {
+        dealerStreakElement.innerText = '無';
+      } else {
+        dealerStreakElement.innerText = `連${dealerStreak}`;
+      }
+    }
+
+    // 更新分數顯示
+    function updateScores() {
+      for (let i = 1; i <= 4; i++) {
+        document.getElementById(`score${i}`).innerText = scores[i];
+      }
+    }
+
+    // 打開模態框
+    function openModal(modalId) {
+      document.getElementById(modalId).style.display = 'block';
+    }
+
+    // 關閉模態框
+    function closeModal(modalId) {
+      document.getElementById(modalId).style.display = 'none';
+    }
+
+    // 點擊模態框外部關閉模態框
+    window.onclick = function(event) {
+      const modals = document.getElementsByClassName('modal');
+      for (let modal of modals) {
+        if (event.target === modal) {
+          modal.style.display = 'none';
+        }
+      }
+    };
+
+    // 玩家按鈕被點擊
+    function playerClicked(playerNumber) {
+      currentWinner = playerNumber;
+      openModal('winTypeModal');
+    }
+
+    // 選擇胡牌方式
+    function selectWinType(winType) {
+      currentWinType = winType;
+      closeModal('winTypeModal');
+
+      if (winType === '自摸') {
+        // 顯示輸入台數前，先更新 bonusInfo
+        preparePointsModal();
+        openModal('pointsModal');
+      } else if (winType === '吃胡') {
+        generateLoserButtons();
+        openModal('loserModal');
+      }
+    }
+
+    // 生成放槍玩家按鈕
+    function generateLoserButtons() {
+      const loserButtonsDiv = document.getElementById('loserButtons');
+      loserButtonsDiv.innerHTML = '';
+      for (let i = 1; i <= 4; i++) {
+        const btn = document.createElement('button');
+        btn.innerText = `玩家 ${i}`;
+        if (i === currentWinner) {
+          btn.classList.add('disabled');
+          btn.disabled = true;
+        } else {
+          btn.onclick = () => selectLoser(i);
+        }
+        loserButtonsDiv.appendChild(btn);
+      }
+    }
+
+    // 選擇放槍玩家
+    function selectLoser(loserNumber) {
+      tempLoser = loserNumber;
+      closeModal('loserModal');
+      document.getElementById('confirmationMessage').innerText =
+        `確定選擇玩家 ${loserNumber} 為放槍玩家？`;
+      openModal('confirmationModal');
+    }
+
+    // 確認放槍玩家
+    function confirmSelection() {
+      currentLoser = tempLoser;
+      tempLoser = null;
+      closeModal('confirmationModal');
+
+      // 顯示Points Modal前，更新 bonusInfo
+      preparePointsModal();
+      openModal('pointsModal');
+    }
+
+    // 顯示Points Modal前，先顯示莊家台 & 自摸台資訊
+    function preparePointsModal() {
+      const bonusInfoDiv = document.getElementById('bonusInfo');
+      let infoText = '';
+
+      // dealerBonus: (dealerStreak * 2) + 1
+      const dealerBonus = (dealerStreak * 2) + 1;
+
+      // 自摸台 => 若 "自摸" 就 +1，否則 0
+      const selfDrawBonus = (currentWinType === '自摸') ? 1 : 0;
+      // 莊家放槍 => 若 "吃胡" + (currentLoser === DEALER) 就 +1，否則 0
+      const dealerFangChong = (currentWinType === '吃胡' && currentLoser === DEALER) ? 1 : 0;
+
+      // 若贏家是莊家，才把「莊家台」加計到 points => 這裡也可以先顯示
+      // 但要注意：實際加到 points 也要看 confirmPoints 的邏輯
+      const isDealerWin = (currentWinner === DEALER);
+      let realDealerBonus = isDealerWin ? dealerBonus : 0;
+
+      infoText += `莊家台：${dealerBonus}（若贏家為莊家，則 +${dealerBonus}）\n`;
+      infoText += `自摸台：${selfDrawBonus}\n`;
+      infoText += `莊家放槍：${dealerFangChong}\n`;
+      infoText += '(以上將自動加計)';
+
+      bonusInfoDiv.textContent = infoText;
+    }
+
+    // 確認台數並計算分數
+    function confirmPoints() {
+      const pointsInput = document.getElementById('pointsInput');
+      let basePoints = parseInt(pointsInput.value);
+      if (isNaN(basePoints) || basePoints < 0) {
+        alert('請輸入有效的台數');
+        return;
+      }
+
+      let totalPoints = basePoints;
+
+      // 1) 若贏家是莊家 => +莊家台
+      const isDealerWin = (currentWinner === DEALER);
+      if (isDealerWin) {
+        const dealerBonus = (dealerStreak * 2) + 1;
+        totalPoints += dealerBonus;
+      }
+
+      // 2) 自摸 => +1
+      if (currentWinType === '自摸') {
+        totalPoints += 1;
+      }
+
+      // 3) 莊家放槍 => +1
+      if (currentWinType === '吃胡' && currentLoser === DEALER) {
+        totalPoints += 1;
+      }
+
+      // 接著看胡牌方式計算
+      if (currentWinType === '自摸') {
+        // 自摸 => 其他三家支付
+        for (let i = 1; i <= 4; i++) {
+          if (i !== currentWinner) {
+            scores[i] -= totalPoints;
+            scores[currentWinner] += totalPoints;
+          }
+        }
+        // 更新連莊
+        if (isDealerWin) {
+          dealerStreak++;
+        } else {
+          dealerStreak = 0;
+        }
+      } else if (currentWinType === '吃胡') {
+        // 吃胡 => 輸家支付
+        scores[currentLoser] -= totalPoints;
+        scores[currentWinner] += totalPoints;
+        // 更新連莊
+        if (isDealerWin) {
+          dealerStreak++;
+        } else {
+          dealerStreak = 0;
+        }
+      }
+
+      // 更新畫面
+      updateScores();
+      updateDealerInfo();
+      saveScores();
+
+      // 重置狀態
+      currentWinner = null;
+      currentLoser = null;
+      currentWinType = null;
+      pointsInput.value = '0';
+      document.getElementById('bonusInfo').textContent = '';
+      closeModal('pointsModal');
+
+      // 若贏家不是莊家 => 跳轉 p2.html
+      if (!isDealerWin) {
+        window.location.href = 'p2.html';
+      }
+    }
+
+    // 重置遊戲
+    function resetGame() {
+      dealerStreak = 0;
+      for (let i = 1; i <= 4; i++) {
+        scores[i] = 0;
+      }
+      updateScores();
+      updateDealerInfo();
+      saveScores();
+      alert('遊戲已重置。');
+    }
+
+    // 增加台數
+    function increasePoints() {
+      const pointsInput = document.getElementById('pointsInput');
+      let currentValue = parseInt(pointsInput.value);
+      if (isNaN(currentValue)) currentValue = 0;
+      if (currentValue < 100) {
+        pointsInput.value = currentValue + 1;
+      }
+    }
+
+    // 減少台數
+    function decreasePoints() {
+      const pointsInput = document.getElementById('pointsInput');
+      let currentValue = parseInt(pointsInput.value);
+      if (isNaN(currentValue) || currentValue <= 0) {
+        pointsInput.value = 0;
+      } else {
+        pointsInput.value = currentValue - 1;
+      }
+    }
+
+    // 保存分數到 localStorage
+    function saveScores() {
+      const gameState = {
+        scores: scores,
+        dealerStreak: dealerStreak
+      };
+      localStorage.setItem('mahjongGameState', JSON.stringify(gameState));
+    }
+
+    // 從 localStorage 載入分數
+    function loadScores() {
+      const savedState = localStorage.getItem('mahjongGameState');
+      if (savedState) {
+        const parsedState = JSON.parse(savedState);
+        for (let i = 1; i <= 4; i++) {
+          if (parsedState.scores[i] !== undefined) {
+            scores[i] = parsedState.scores[i];
+          }
+        }
+        dealerStreak = parsedState.dealerStreak || 0;
+      }
+      updateScores();
+      updateDealerInfo();
+    }
+
+    // 頁面載入時
+    window.onload = () => {
+      loadScores();
+    };
+  </script>
+</body>
+</html>
