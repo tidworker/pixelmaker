@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>麻將計分系統</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    iframe {
+      border: none;
+      width: 100%;
+    }
+    #p1Frame {
+      height: 60%; /* 上方 iframe 高度佔 60% */
+    }
+    #settingsFrame {
+      height: 40%; /* 下方 iframe 高度佔 40% */
+    }
+  </style>
+</head>
+<body>
+  <iframe id="p1Frame" src="p1.html" title="計分頁"></iframe>
+  <iframe id="settingsFrame" src="settings.html" title="設定頁"></iframe>
+</body>
+</html>
