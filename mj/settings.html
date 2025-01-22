@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>設定玩家名稱</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 50px;
+      background-color: #f2f2f2;
+    }
+    h1 {
+      color: #333;
+    }
+    .player-input {
+      margin: 10px 0;
+      font-size: 18px;
+    }
+    .player-input input {
+      font-size: 18px;
+      width: 200px;
+      padding: 5px;
+      margin-left: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      margin-top: 20px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h1>設定玩家名稱</h1>
+
+  <div class="player-input">
+    <label>玩家1：<input type="text" id="player1" placeholder="例如：張三"/></label>
+  </div>
+  <div class="player-input">
+    <label>玩家2：<input type="text" id="player2" placeholder="例如：李四"/></label>
+  </div>
+  <div class="player-input">
+    <label>玩家3：<input type="text" id="player3" placeholder="例如：王五"/></label>
+  </div>
+  <div class="player-input">
+    <label>玩家4：<input type="text" id="player4" placeholder="例如：陳六"/></label>
+  </div>
+
+  <button onclick="savePlayerNames()">儲存設定</button>
+
+  <script>
+    // 載入現有資料 (若有)
+    window.onload = function() {
+      const storedNames = JSON.parse(localStorage.getItem('mahjongPlayerNames'));
+      if (storedNames) {
+        document.getElementById('player1').value = storedNames[0] || '';
+        document.getElementById('player2').value = storedNames[1] || '';
+        document.getElementById('player3').value = storedNames[2] || '';
+        document.getElementById('player4').value = storedNames[3] || '';
+      }
+    };
+
+    function savePlayerNames() {
+      const names = [
+        document.getElementById('player1').value || '玩家1',
+        document.getElementById('player2').value || '玩家2',
+        document.getElementById('player3').value || '玩家3',
+        document.getElementById('player4').value || '玩家4',
+      ];
+      localStorage.setItem('mahjongPlayerNames', JSON.stringify(names));
+      alert('玩家名稱已儲存！');
+    }
+  </script>
+</body>
+</html>
