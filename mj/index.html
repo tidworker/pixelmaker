@@ -12,7 +12,7 @@
         .hidden {
             display: none;
         }
-        .player-buttons button, .options button, .loser-selection button, .input-section button, .back-button {
+        .player-buttons button, .options button, .loser-selection button, .input-section button, .back-button, .reset-button {
             padding: 10px 20px;
             margin: 5px;
             font-size: 16px;
@@ -69,7 +69,7 @@
 
     <!-- 結果表格 -->
     <div class="result-section hidden">
-        <h2>計分結果</h2>
+        <h2>累計分數</h2>
         <table>
             <thead>
                 <tr>
@@ -104,12 +104,13 @@
 
     <!-- 重新開始按鈕 -->
     <div class="reset-section hidden">
-        <button onclick="resetSystem()">重新開始</button>
+        <button class="reset-button" onclick="resetSystem()">重新開始</button>
     </div>
 
     <script>
         // 全局變量
-        let currentPlayer = 1; // 預設莊家為玩家1
+        let currentPlayer = 1; // 當前選擇的勝利玩家
+        let dealer = 1; // 當前莊家，預設為玩家1
         let losers = [];
         const base = 50;
         const multiplier = 20;
@@ -132,6 +133,29 @@
         const recordSection = document.querySelector('.record-section');
         const recordTableBody = document.getElementById('record-table-body');
         const resetSection = document.querySelector('.reset-section');
+
+        // 函數：獲取下一位莊家
+        function getNextDealer(currentDealer) {
+            return currentDealer % 4 + 1; // 1→2, 2→3, 3→4, 4→1
+        }
+
+        // 函數：更新主頁面莊家標示
+        function updateDealerLabel() {
+            playerButtons.forEach(button => {
+                const player = parseInt(button.getAttribute('data-player'));
+                if (player === dealer) {
+                    button.textContent = `玩家${player} (莊家)`;
+                    button.classList.add('dealer');
+                } else {
+                    // 移除之前的莊家標示
+                    button.textContent = `玩家${player}`;
+                    button.classList.remove('dealer');
+                }
+            });
+        }
+
+        // 初始更新莊家標示
+        updateDealerLabel();
 
         // 點擊玩家按鈕
         playerButtons.forEach(button => {
@@ -215,13 +239,20 @@
             });
             currentRound++;
 
+            // 決定是否換莊
+            if (currentPlayer !== dealer) {
+                dealer = getNextDealer(dealer);
+                updateDealerLabel(); // 更新主頁面莊家標示
+            }
+            // 如果 winner 是莊家，莊家保持不變
+
             // 生成結果表格
             scoreTableBody.innerHTML = '';
             for (let i = 1; i <=4; i++) {
                 const row = document.createElement('tr');
                 const playerCell = document.createElement('td');
                 playerCell.textContent = `玩家${i}`;
-                if (i ===1) {
+                if (i === dealer) {
                     playerCell.textContent += ' (莊家)';
                     playerCell.classList.add('dealer');
                 }
@@ -263,6 +294,7 @@
         // 重置系統
         function resetSystem() {
             currentPlayer = 1;
+            dealer = 1;
             losers = [];
             optionsDiv.classList.add('hidden');
             loserSelectionDiv.classList.add('hidden');
@@ -278,6 +310,8 @@
             rounds = [];
             recordTableBody.innerHTML = '';
             currentRound = 1;
+            // 更新莊家標示
+            updateDealerLabel();
         }
 
         // 初始化隱藏所有選項
