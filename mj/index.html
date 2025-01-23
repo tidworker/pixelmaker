@@ -1,31 +1,195 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>麻將計分系統</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-    iframe {
-      border: none;
-      width: 100%;
-    }
-    #p1Frame {
-      height: 60%; /* 上方 iframe 高度佔 60% */
-    }
-    #settingsFrame {
-      height: 40%; /* 下方 iframe 高度佔 40% */
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>麻將計分系統</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        .player-buttons button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+        }
+        .hidden {
+            display: none;
+        }
+        .options, .loser-selection, .input-section, .result-section {
+            margin-top: 20px;
+        }
+        table {
+            margin: 0 auto;
+            border-collapse: collapse;
+            width: 60%;
+        }
+        table, th, td {
+            border: 1px solid #333;
+        }
+        th, td {
+            padding: 10px;
+        }
+        .back-button {
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
-  <iframe id="p1Frame" src="p1.html" title="計分頁"></iframe>
-  <iframe id="settingsFrame" src="settings.html" title="設定頁"></iframe>
+
+    <h1>麻將計分系統</h1>
+
+    <!-- 玩家按鈕 -->
+    <div class="player-buttons">
+        <button data-player="1">玩家1 (莊家)</button>
+        <button data-player="2">玩家2</button>
+        <button data-player="3">玩家3</button>
+        <button data-player="4">玩家4</button>
+    </div>
+
+    <!-- 選項：吃胡 或 自摸 -->
+    <div class="options hidden">
+        <h2>請選擇</h2>
+        <button id="chihu">吃胡</button>
+        <button id="zimo">自摸</button>
+    </div>
+
+    <!-- 選擇輸家 -->
+    <div class="loser-selection hidden">
+        <h2>請選擇放槍玩家</h2>
+        <div id="loser-buttons"></div>
+    </div>
+
+    <!-- 輸入台數 -->
+    <div class="input-section hidden">
+        <h2>請輸入台數</h2>
+        <input type="number" id="taishu" min="1" placeholder="台數">
+        <button id="confirm-score">確定計分</button>
+    </div>
+
+    <!-- 結果表格 -->
+    <div class="result-section hidden">
+        <h2>計分結果</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>玩家</th>
+                    <th>分數</th>
+                </tr>
+            </thead>
+            <tbody id="score-table-body">
+                <!-- 分數將在此顯示 -->
+            </tbody>
+        </table>
+        <button class="back-button" onclick="resetSystem()">重新開始</button>
+    </div>
+
+    <script>
+        // 全局變量
+        let currentPlayer = 1; // 預設莊家為玩家1
+        let losers = [];
+        const base = 50;
+        const multiplier = 20;
+
+        // 獲取元素
+        const playerButtons = document.querySelectorAll('.player-buttons button');
+        const optionsDiv = document.querySelector('.options');
+        const chihuButton = document.getElementById('chihu');
+        const zimoButton = document.getElementById('zimo');
+        const loserSelectionDiv = document.querySelector('.loser-selection');
+        const loserButtonsDiv = document.getElementById('loser-buttons');
+        const inputSection = document.querySelector('.input-section');
+        const confirmScoreButton = document.getElementById('confirm-score');
+        const taishuInput = document.getElementById('taishu');
+        const resultSection = document.querySelector('.result-section');
+        const scoreTableBody = document.getElementById('score-table-body');
+
+        // 點擊玩家按鈕
+        playerButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                currentPlayer = parseInt(button.getAttribute('data-player'));
+                optionsDiv.classList.remove('hidden');
+                // 隱藏其他部分
+                loserSelectionDiv.classList.add('hidden');
+                inputSection.classList.add('hidden');
+                resultSection.classList.add('hidden');
+            });
+        });
+
+        // 點擊吃胡
+        chihuButton.addEventListener('click', () => {
+            optionsDiv.classList.add('hidden');
+            loserSelectionDiv.classList.remove('hidden');
+            // 顯示其他三個玩家作為輸家選項
+            loserButtonsDiv.innerHTML = '';
+            playerButtons.forEach(button => {
+                const player = parseInt(button.getAttribute('data-player'));
+                if (player !== currentPlayer) {
+                    const btn = document.createElement('button');
+                    btn.textContent = `玩家${player}`;
+                    btn.addEventListener('click', () => {
+                        losers = [player];
+                        loserSelectionDiv.classList.add('hidden');
+                        inputSection.classList.remove('hidden');
+                    });
+                    loserButtonsDiv.appendChild(btn);
+                }
+            });
+        });
+
+        // 點擊自摸
+        zimoButton.addEventListener('click', () => {
+            optionsDiv.classList.add('hidden');
+            losers = [2,3,4].filter(p => p !== currentPlayer);
+            inputSection.classList.remove('hidden');
+            // 隱藏輸家選擇
+            loserSelectionDiv.classList.add('hidden');
+        });
+
+        // 計分
+        confirmScoreButton.addEventListener('click', () => {
+            const taishu = parseInt(taishuInput.value);
+            if (isNaN(taishu) || taishu < 1) {
+                alert('請輸入有效的台數');
+                return;
+            }
+            const score = taishu * multiplier + base;
+            // 計算分數
+            const scores = [0, 0, 0, 0, 0]; // 玩家1-4，索引0忽略
+            losers.forEach(loser => {
+                scores[loser] -= score;
+                scores[currentPlayer] += score;
+            });
+            // 生成表格
+            scoreTableBody.innerHTML = '';
+            for (let i = 1; i <=4; i++) {
+                const row = document.createElement('tr');
+                const playerCell = document.createElement('td');
+                playerCell.textContent = `玩家${i}` + (i ===1 ? ' (莊家)' : '');
+                const scoreCell = document.createElement('td');
+                scoreCell.textContent = scores[i];
+                row.appendChild(playerCell);
+                row.appendChild(scoreCell);
+                scoreTableBody.appendChild(row);
+            }
+            // 顯示結果
+            inputSection.classList.add('hidden');
+            resultSection.classList.remove('hidden');
+        });
+
+        // 重置系統
+        function resetSystem() {
+            currentPlayer = 1;
+            losers = [];
+            optionsDiv.classList.add('hidden');
+            loserSelectionDiv.classList.add('hidden');
+            inputSection.classList.add('hidden');
+            resultSection.classList.add('hidden');
+            taishuInput.value = '';
+        }
+
+    </script>
+
 </body>
 </html>
