@@ -1,329 +1,428 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>麻將計分系統</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 20px;
-        }
-        .hidden {
-            display: none;
-        }
-        .player-buttons button, .options button, .loser-selection button, .input-section button, .back-button, .reset-button {
-            padding: 10px 20px;
-            margin: 5px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        table {
-            margin: 20px auto;
-            border-collapse: collapse;
-            width: 80%;
-        }
-        table, th, td {
-            border: 1px solid #000;
-        }
-        th, td {
-            padding: 8px;
-            text-align: center;
-        }
-        .dealer {
-            font-weight: bold;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>麻將計分系統</title>
+  <style>
+    /* Modal 基本樣式 */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 10% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 320px;
+      position: relative;
+    }
+    .close {
+      color: #aaa;
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .close:hover {
+      color: black;
+    }
+    /* 分數表格 */
+    table {
+      border-collapse: collapse;
+      width: 80%;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #888;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    /* 當前莊家顯示 */
+    #currentBankerDisplay {
+      font-size: 18px;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    /* 設定區 */
+    #settings {
+      margin-top: 10px;
+      font-size: 16px;
+    }
+    #settings label {
+      margin-right: 10px;
+    }
+    #settings input {
+      width: 60px;
+      margin-right: 20px;
+    }
+    /* 輸入台數區（含 + - 按鈕） */
+    .tai-input-container {
+      display: inline-flex;
+      align-items: center;
+    }
+    .tai-input-container button {
+      width: 30px;
+      height: 30px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .tai-input-container input {
+      width: 50px;
+      text-align: center;
+      margin: 0 5px;
+    }
+    /* 加計說明 */
+    #bonusInfo {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #555;
+      white-space: pre-line;
+    }
+    /* Modal內按鈕樣式 */
+    .select-button {
+      margin: 5px;
+      padding: 8px 12px;
+      border: 1px solid #888;
+      background-color: #e0e0e0;
+      cursor: pointer;
+    }
+    .select-button.selected {
+      background-color: #888;
+      color: white;
+      cursor: default;
+    }
+    /* 區塊標籤 */
+    .section-label {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    /* 新增局按鈕 */
+    #newRoundButton {
+      margin-top: 15px;
+      padding: 8px 16px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
+  <h1>麻將計分系統</h1>
+  <!-- 設定區：底分與倍率 -->
+  <div id="settings">
+    <label for="baseScoreInput">底分：</label>
+    <input type="number" id="baseScoreInput" value="50">
+    <label for="rateInput">倍率：</label>
+    <input type="number" id="rateInput" value="20">
+  </div>
+  
+  <!-- 當前莊家顯示 -->
+  <div id="currentBankerDisplay">當前莊家：玩家1 (莊0)</div>
+  
+  <!-- 新增局按鈕 -->
+  <button id="newRoundButton">新增局</button>
 
-    <h1>麻將計分系統</h1>
+  <!-- 分數表格 -->
+  <h2>分數表</h2>
+  <table id="scoreTable">
+    <thead>
+      <tr>
+        <th>回合</th>
+        <th>莊家</th>
+        <th>玩家1</th>
+        <th>玩家2</th>
+        <th>玩家3</th>
+        <th>玩家4</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- 從第一回合開始記錄 -->
+    </tbody>
+  </table>
 
-    <!-- 玩家按鈕 -->
-    <div class="player-buttons">
-        <button data-player="1">玩家1 (莊家)</button>
-        <button data-player="2">玩家2</button>
-        <button data-player="3">玩家3</button>
-        <button data-player="4">玩家4</button>
+  <!-- Modal 彈出視窗 -->
+  <div id="scoreModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <!-- 勝利方式選擇 -->
+      <div id="winTypeSelection">
+        <h3>選擇勝利方式</h3>
+        <button class="select-button" id="chiHuBtn">吃胡</button>
+        <button class="select-button" id="ziMoBtn">自摸</button>
+      </div>
+      <!-- 其他選項 -->
+      <div id="additionalOptions" style="display:none;">
+        <!-- 選定胡牌玩家 -->
+        <div id="winnerSelectionContainer">
+          <div class="section-label">選定胡牌玩家:</div>
+          <div id="winnerButtonContainer"></div>
+        </div>
+        <!-- 吃胡才需要選擇放槍玩家 -->
+        <div id="loserSelectionContainer" style="display:none;">
+          <div class="section-label">選擇放槍玩家:</div>
+          <div id="loserButtonContainer"></div>
+        </div>
+        <!-- 輸入台數（預設 0） -->
+        <div style="margin-top:10px;">
+          <label for="multiplier">輸入台數:</label>
+          <div class="tai-input-container">
+            <button id="decreaseTai">-</button>
+            <input type="number" id="multiplier" min="0" value="0">
+            <button id="increaseTai">+</button>
+          </div>
+        </div>
+        <!-- 加計說明 -->
+        <div id="bonusInfo"></div>
+        <button id="submitScore" style="margin-top:10px;">確定</button>
+      </div>
     </div>
+  </div>
 
-    <!-- 選項：吃胡 或 自摸 -->
-    <div class="options hidden">
-        <h2>請選擇</h2>
-        <button id="chihu">吃胡</button>
-        <button id="zimo">自摸</button>
-    </div>
+  <script>
+    let round = 0;
+    let scores = { '1': 0, '2': 0, '3': 0, '4': 0 };
+    // currentBanker 與 bankerStreak 代表下一局狀態，但分數表中顯示的是本局計分時的莊家狀態
+    let currentBanker = '1';
+    let bankerStreak = 0;
+    
+    // 選擇類型與選定結果
+    let winType = ""; // "chiHu" 或 "ziMo"
+    let selectedWinner = ""; // 胡牌玩家
+    let selectedLoser = "";  // 放槍玩家（吃胡時用）
 
-    <!-- 選擇輸家 -->
-    <div class="loser-selection hidden">
-        <h2>請選擇放槍玩家</h2>
-        <div id="loser-buttons"></div>
-    </div>
+    const modal = document.getElementById("scoreModal");
+    const closeBtn = document.querySelector(".close");
+    const winTypeSelection = document.getElementById("winTypeSelection");
+    const additionalOptions = document.getElementById("additionalOptions");
+    const winnerButtonContainer = document.getElementById("winnerButtonContainer");
+    const loserSelectionContainer = document.getElementById("loserSelectionContainer");
+    const loserButtonContainer = document.getElementById("loserButtonContainer");
+    const bonusInfoDiv = document.getElementById("bonusInfo");
+    const currentBankerDisplay = document.getElementById("currentBankerDisplay");
 
-    <!-- 輸入台數 -->
-    <div class="input-section hidden">
-        <h2>請輸入台數</h2>
-        <input type="number" id="taishu" min="0" value="0" placeholder="台數">
-        <button id="confirm-score">確定計分</button>
-    </div>
+    // 點擊 × 按鈕關閉 Modal
+    closeBtn.addEventListener("click", function() {
+      closeModal();
+    });
 
-    <!-- 結果表格 -->
-    <div class="result-section hidden">
-        <h2>累計分數</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>玩家</th>
-                    <th>累計分數</th>
-                </tr>
-            </thead>
-            <tbody id="score-table-body">
-                <!-- 分數將在此顯示 -->
-            </tbody>
-        </table>
-    </div>
+    // 開啟 Modal（每局重新初始化）
+    function openModal() {
+      winType = "";
+      selectedWinner = "";
+      selectedLoser = "";
+      bonusInfoDiv.innerText = "";
+      winnerButtonContainer.innerHTML = "";
+      loserButtonContainer.innerHTML = "";
+      winTypeSelection.style.display = "block";
+      additionalOptions.style.display = "none";
+      loserSelectionContainer.style.display = "none";
+      document.getElementById("multiplier").value = 0;
+      modal.style.display = "block";
+    }
 
-    <!-- 回合紀錄表格 -->
-    <div class="record-section hidden">
-        <h2>回合成績紀錄</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>回合</th>
-                    <th>玩家1</th>
-                    <th>玩家2</th>
-                    <th>玩家3</th>
-                    <th>玩家4</th>
-                </tr>
-            </thead>
-            <tbody id="record-table-body">
-                <!-- 回合紀錄將在此顯示 -->
-            </tbody>
-        </table>
-    </div>
+    // 關閉 Modal
+    function closeModal() {
+      modal.style.display = "none";
+    }
 
-    <!-- 重新開始按鈕 -->
-    <div class="reset-section hidden">
-        <button class="reset-button" onclick="resetSystem()">重新開始</button>
-    </div>
+    // 產生選定胡牌玩家的按鈕 (1～4)－可隨時重新選擇
+    function populateWinnerButtons() {
+      winnerButtonContainer.innerHTML = "";
+      for (let i = 1; i <= 4; i++) {
+        const btn = document.createElement("button");
+        btn.classList.add("select-button");
+        btn.innerText = "玩家" + i;
+        btn.setAttribute("data-player", i.toString());
+        btn.addEventListener("click", function() {
+          document.querySelectorAll("#winnerButtonContainer .select-button").forEach(b => b.classList.remove("selected"));
+          selectedWinner = this.getAttribute("data-player");
+          this.classList.add("selected");
+          // 若為吃胡則重新產生放槍玩家按鈕（排除胡牌玩家）
+          if (winType === "chiHu") {
+            populateLoserButtons();
+          }
+          updateBonusInfo();
+        });
+        winnerButtonContainer.appendChild(btn);
+      }
+    }
 
-    <script>
-        // 全局變量
-        let currentPlayer = 1; // 當前選擇的勝利玩家
-        let dealer = 1; // 當前莊家，預設為玩家1
-        let losers = [];
-        const base = 50;
-        const multiplier = 20;
-        let scoresTotal = [0, 0, 0, 0, 0]; // 玩家1-4，索引0忽略
-        let rounds = []; // 用於記錄每回合的分數
-        let currentRound = 1; // 回合計數
-
-        // 獲取元素
-        const playerButtons = document.querySelectorAll('.player-buttons button');
-        const optionsDiv = document.querySelector('.options');
-        const chihuButton = document.getElementById('chihu');
-        const zimoButton = document.getElementById('zimo');
-        const loserSelectionDiv = document.querySelector('.loser-selection');
-        const loserButtonsDiv = document.getElementById('loser-buttons');
-        const inputSection = document.querySelector('.input-section');
-        const confirmScoreButton = document.getElementById('confirm-score');
-        const taishuInput = document.getElementById('taishu');
-        const resultSection = document.querySelector('.result-section');
-        const scoreTableBody = document.getElementById('score-table-body');
-        const recordSection = document.querySelector('.record-section');
-        const recordTableBody = document.getElementById('record-table-body');
-        const resetSection = document.querySelector('.reset-section');
-
-        // 函數：獲取下一位莊家
-        function getNextDealer(currentDealer) {
-            return currentDealer % 4 + 1; // 1→2, 2→3, 3→4, 4→1
+    // 產生放槍玩家按鈕（吃胡情形），排除已選為胡牌者
+    function populateLoserButtons() {
+      loserButtonContainer.innerHTML = "";
+      for (let i = 1; i <= 4; i++) {
+        const playerId = i.toString();
+        const btn = document.createElement("button");
+        btn.classList.add("select-button");
+        btn.innerText = "玩家" + playerId;
+        btn.setAttribute("data-player", playerId);
+        if (playerId === selectedWinner) {
+          btn.disabled = true;
+          btn.classList.add("selected");
+        } else {
+          btn.addEventListener("click", function() {
+            document.querySelectorAll("#loserButtonContainer .select-button").forEach(b => b.classList.remove("selected"));
+            this.classList.add("selected");
+            selectedLoser = this.getAttribute("data-player");
+            updateBonusInfo();
+          });
         }
+        loserButtonContainer.appendChild(btn);
+      }
+    }
 
-        // 函數：更新主頁面莊家標示
-        function updateDealerLabel() {
-            playerButtons.forEach(button => {
-                const player = parseInt(button.getAttribute('data-player'));
-                if (player === dealer) {
-                    button.textContent = `玩家${player} (莊家)`;
-                    button.classList.add('dealer');
-                } else {
-                    // 移除之前的莊家標示
-                    button.textContent = `玩家${player}`;
-                    button.classList.remove('dealer');
-                }
-            });
+    // 更新加計說明
+    // 自摸情形：始終顯示「自摸：1台」
+    // 若自摸贏家非莊家，則額外顯示「莊家加計：1台」
+    // 吃胡情形則不變
+    function updateBonusInfo() {
+      if (winType === "ziMo") {
+        let info = "自摸：1台";
+        if (selectedWinner !== currentBanker) {
+          info += "\n莊家加計：1台";
         }
+        bonusInfoDiv.innerText = info;
+      } else if (winType === "chiHu") {
+        let bonusBanker = 0;
+        if (selectedWinner === currentBanker || selectedLoser === currentBanker) {
+          bonusBanker = (bankerStreak * 2) + 1;
+        }
+        bonusInfoDiv.innerText = bonusBanker > 0 ? "莊家加計：" + bonusBanker + "台" : "";
+      } else {
+        bonusInfoDiv.innerText = "";
+      }
+    }
 
-        // 初始更新莊家標示
-        updateDealerLabel();
+    // 處理 + / - 按鈕
+    document.getElementById("decreaseTai").addEventListener("click", function() {
+      const input = document.getElementById("multiplier");
+      let value = parseInt(input.value, 10) || 0;
+      if (value > 0) {
+        input.value = value - 1;
+      }
+    });
+    document.getElementById("increaseTai").addEventListener("click", function() {
+      const input = document.getElementById("multiplier");
+      let value = parseInt(input.value, 10) || 0;
+      input.value = value + 1;
+    });
 
-        // 點擊玩家按鈕
-        playerButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                currentPlayer = parseInt(button.getAttribute('data-player'));
-                optionsDiv.classList.remove('hidden');
-                // 隱藏其他部分
-                loserSelectionDiv.classList.add('hidden');
-                inputSection.classList.add('hidden');
-                resultSection.classList.add('hidden');
-                recordSection.classList.add('hidden');
-                resetSection.classList.add('hidden');
-            });
-        });
+    // 勝利方式按鈕
+    document.getElementById("chiHuBtn").addEventListener("click", function() {
+      winType = "chiHu";
+      winTypeSelection.style.display = "none";
+      additionalOptions.style.display = "block";
+      loserSelectionContainer.style.display = "block"; // 吃胡需選擇放槍玩家
+      populateWinnerButtons();
+    });
+    document.getElementById("ziMoBtn").addEventListener("click", function() {
+      winType = "ziMo";
+      winTypeSelection.style.display = "none";
+      additionalOptions.style.display = "block";
+      loserSelectionContainer.style.display = "none"; // 自摸不需放槍玩家
+      populateWinnerButtons();
+    });
 
-        // 點擊吃胡
-        chihuButton.addEventListener('click', () => {
-            optionsDiv.classList.add('hidden');
-            loserSelectionDiv.classList.remove('hidden');
-            // 顯示其他三個玩家作為輸家選項
-            loserButtonsDiv.innerHTML = '';
-            playerButtons.forEach(button => {
-                const player = parseInt(button.getAttribute('data-player'));
-                if (player !== currentPlayer) {
-                    const btn = document.createElement('button');
-                    btn.textContent = `玩家${player}`;
-                    btn.addEventListener('click', () => {
-                        losers = [player];
-                        loserSelectionDiv.classList.add('hidden');
-                        inputSection.classList.remove('hidden');
-                        // 重置輸入欄位
-                        taishuInput.value = 0;
-                    });
-                    loserButtonsDiv.appendChild(btn);
-                }
-            });
-        });
-
-        // 點擊自摸
-        zimoButton.addEventListener('click', () => {
-            optionsDiv.classList.add('hidden');
-            losers = [1,2,3,4].filter(p => p !== currentPlayer);
-            inputSection.classList.remove('hidden');
-            // 隱藏輸家選擇
-            loserSelectionDiv.classList.add('hidden');
-            // 重置輸入欄位
-            taishuInput.value = 0;
-        });
-
-        // 計分
-        confirmScoreButton.addEventListener('click', () => {
-            const taishu = parseInt(taishuInput.value);
-            if (isNaN(taishu) || taishu < 0) { // 允許台數為0
-                alert('請輸入有效的台數（0或更高）');
-                return;
-            }
-
-            let score;
-            if (taishu === 0) {
-                score = base;
+    // 確定後提交，計算分數與更新莊家狀態
+    document.getElementById("submitScore").addEventListener("click", function() {
+      if (!selectedWinner) {
+        alert("請選定胡牌玩家！");
+        return;
+      }
+      if (winType === "chiHu" && !selectedLoser) {
+        alert("請選擇放槍玩家！");
+        return;
+      }
+      const inputTai = parseInt(document.getElementById("multiplier").value, 10) || 0;
+      const baseScore = parseInt(document.getElementById("baseScoreInput").value, 10);
+      const rate = parseInt(document.getElementById("rateInput").value, 10);
+      
+      let bonusSelf = 0;
+      let bonusBanker = 0;
+      if (winType === "ziMo") {
+        // 自摸時：始終顯示「自摸：1台」
+        bonusSelf = 1;
+        if (selectedWinner !== currentBanker) {
+          bonusBanker = 1;
+        }
+      } else if (winType === "chiHu") {
+        if (selectedWinner === currentBanker || selectedLoser === currentBanker) {
+          bonusBanker = (bankerStreak * 2) + 1;
+        }
+      }
+      const totalBonus = bonusSelf + bonusBanker;
+      const effectiveTai = inputTai + totalBonus;
+      const effectiveScore = baseScore + (effectiveTai * rate);
+      
+      // 更新分數
+      if (winType === "chiHu") {
+        scores[selectedWinner] += effectiveScore;
+        scores[selectedLoser] -= effectiveScore;
+      } else if (winType === "ziMo") {
+        scores[selectedWinner] += effectiveScore * 3;
+        for (let p in scores) {
+          if (p !== selectedWinner) {
+            if (p === currentBanker && selectedWinner !== currentBanker) {
+              scores[p] -= effectiveScore * 2;
             } else {
-                score = taishu * multiplier + base;
+              scores[p] -= effectiveScore;
             }
-
-            // 計算分數
-            const roundScores = [0, 0, 0, 0, 0]; // 玩家1-4，索引0忽略
-            losers.forEach(loser => {
-                scoresTotal[loser] -= score;
-                roundScores[loser] -= score;
-                scoresTotal[currentPlayer] += score;
-                roundScores[currentPlayer] += score;
-            });
-
-            // 記錄回合分數
-            rounds.push({
-                round: currentRound,
-                player1: roundScores[1],
-                player2: roundScores[2],
-                player3: roundScores[3],
-                player4: roundScores[4]
-            });
-            currentRound++;
-
-            // 決定是否換莊
-            if (currentPlayer !== dealer) {
-                dealer = getNextDealer(dealer);
-                updateDealerLabel(); // 更新主頁面莊家標示
-            }
-            // 如果 winner 是莊家，莊家保持不變
-
-            // 生成結果表格
-            scoreTableBody.innerHTML = '';
-            for (let i = 1; i <=4; i++) {
-                const row = document.createElement('tr');
-                const playerCell = document.createElement('td');
-                playerCell.textContent = `玩家${i}`;
-                if (i === dealer) {
-                    playerCell.textContent += ' (莊家)';
-                    playerCell.classList.add('dealer');
-                }
-                const scoreCell = document.createElement('td');
-                scoreCell.textContent = scoresTotal[i];
-                row.appendChild(playerCell);
-                row.appendChild(scoreCell);
-                scoreTableBody.appendChild(row);
-            }
-
-            // 生成回合紀錄表格
-            recordTableBody.innerHTML = '';
-            rounds.forEach(r => {
-                const row = document.createElement('tr');
-                const roundCell = document.createElement('td');
-                roundCell.textContent = r.round;
-                const p1Cell = document.createElement('td');
-                p1Cell.textContent = r.player1;
-                const p2Cell = document.createElement('td');
-                p2Cell.textContent = r.player2;
-                const p3Cell = document.createElement('td');
-                p3Cell.textContent = r.player3;
-                const p4Cell = document.createElement('td');
-                p4Cell.textContent = r.player4;
-                row.appendChild(roundCell);
-                row.appendChild(p1Cell);
-                row.appendChild(p2Cell);
-                row.appendChild(p3Cell);
-                row.appendChild(p4Cell);
-                recordTableBody.appendChild(row);
-            });
-
-            // 顯示結果和回合紀錄
-            resultSection.classList.remove('hidden');
-            recordSection.classList.remove('hidden');
-            resetSection.classList.remove('hidden');
-        });
-
-        // 重置系統
-        function resetSystem() {
-            currentPlayer = 1;
-            dealer = 1;
-            losers = [];
-            optionsDiv.classList.add('hidden');
-            loserSelectionDiv.classList.add('hidden');
-            inputSection.classList.add('hidden');
-            resultSection.classList.add('hidden');
-            recordSection.classList.add('hidden');
-            resetSection.classList.add('hidden');
-            taishuInput.value = 0;
-            // 重置分數
-            scoresTotal = [0, 0, 0, 0, 0];
-            scoreTableBody.innerHTML = '';
-            // 重置回合紀錄
-            rounds = [];
-            recordTableBody.innerHTML = '';
-            currentRound = 1;
-            // 更新莊家標示
-            updateDealerLabel();
+          }
         }
+      }
+      
+      // 為記錄本局的莊家狀態，先記錄顯示用變數
+      let displayBanker = currentBanker;
+      let displayStreak = bankerStreak;
+      
+      // 更新莊家：若胡牌玩家為當前莊家，則連莊；否則換莊（依循環順序，連莊歸零）
+      if (selectedWinner === currentBanker) {
+        bankerStreak++;
+      } else {
+        currentBanker = (((parseInt(currentBanker)) % 4) + 1).toString();
+        bankerStreak = 0;
+      }
+      
+      round++;
+      const tbody = document.getElementById("scoreTable").querySelector("tbody");
+      const tr = document.createElement("tr");
+      // 分數表中顯示的是本局計分時的莊家狀態
+      tr.innerHTML = `<td>${round}</td>
+                      <td>玩家${displayBanker} (莊${displayStreak})</td>
+                      <td>${scores['1']}</td>
+                      <td>${scores['2']}</td>
+                      <td>${scores['3']}</td>
+                      <td>${scores['4']}</td>`;
+      tbody.appendChild(tr);
+      
+      // 更新畫面上顯示的當前莊家（下一局狀態）
+      currentBankerDisplay.innerText = "當前莊家：玩家" + currentBanker + " (莊" + bankerStreak + ")";
+      closeModal();
+    });
 
-        // 初始化隱藏所有選項
-        window.onload = function() {
-            optionsDiv.classList.add('hidden');
-            loserSelectionDiv.classList.add('hidden');
-            inputSection.classList.add('hidden');
-            resultSection.classList.add('hidden');
-            recordSection.classList.add('hidden');
-            resetSection.classList.add('hidden');
-        }
-    </script>
+    // 點擊 Modal 外部關閉
+    window.addEventListener("click", function(event) {
+      if (event.target === modal) {
+        closeModal();
+      }
+    });
 
+    // 新增局按鈕開啟 Modal
+    document.getElementById("newRoundButton").addEventListener("click", function() {
+      openModal();
+    });
+  </script>
 </body>
 </html>
