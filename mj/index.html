@@ -2,39 +2,104 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <!-- 手機優化 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>麻將計分系統</title>
   <style>
+    /* 基本樣式 */
     .modal {
-      display: none; position: fixed; z-index: 1; left: 0; top: 0; 
-      width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
     }
     .modal-content {
-      background-color: #fefefe; margin: 10% auto; padding: 20px; 
-      border: 1px solid #888; width: 320px; position: relative;
+      background-color: #fefefe;
+      margin: 10% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 90%;
+      max-width: 320px;
+      position: relative;
     }
     .close {
-      color: #aaa; position: absolute; right: 10px; top: 10px; 
-      font-size: 28px; font-weight: bold; cursor: pointer;
+      color: #aaa;
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
     }
     .close:hover { color: black; }
-    table { border-collapse: collapse; width: 80%; margin-top: 20px; }
-    th, td { border: 1px solid #888; padding: 8px; text-align: center; }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 20px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #888;
+      padding: 6px;
+      text-align: center;
+    }
     th { background-color: #f2f2f2; }
-    #currentBankerDisplay { font-size: 18px; margin-top: 10px; font-weight: bold; }
-    #settings { margin-top: 10px; font-size: 16px; }
+    /* 取消表格中莊家欄位 */
+    /* 只顯示回合、玩家1、玩家2、玩家3、玩家4 */
+    #scoreTable th:nth-child(2),
+    #scoreTable td:nth-child(2) {
+      display: none;
+    }
+    #currentBankerDisplay {
+      font-size: 16px;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    #settings {
+      margin-top: 10px;
+      font-size: 16px;
+    }
     #settings label { margin-right: 10px; }
     #settings input { width: 60px; margin-right: 20px; }
     .select-button {
-      margin: 5px; padding: 8px 12px; border: 1px solid #888; 
+      margin: 5px; padding: 8px 12px; border: 1px solid #888;
       background-color: #e0e0e0; cursor: pointer;
     }
     .select-button.selected { background-color: #888; color: white; cursor: default; }
-    .tai-input-container { display: inline-flex; align-items: center; }
-    .tai-input-container button { width: 30px; height: 30px; font-size: 18px; cursor: pointer; }
-    .tai-input-container input { width: 50px; text-align: center; margin: 0 5px; }
-    #bonusInfo { margin-top: 10px; font-size: 14px; color: #555; white-space: pre-line; }
+    .tai-input-container {
+      display: inline-flex;
+      align-items: center;
+    }
+    .tai-input-container button {
+      width: 30px;
+      height: 30px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .tai-input-container input {
+      width: 50px;
+      text-align: center;
+      margin: 0 5px;
+    }
+    #bonusInfo {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #555;
+      white-space: pre-line;
+    }
     .section-label { font-weight: bold; margin-top: 10px; }
-    #newRoundButton { margin-top: 15px; padding: 8px 16px; font-size: 16px; cursor: pointer; }
+    #newRoundButton {
+      margin-top: 15px;
+      padding: 8px 16px;
+      font-size: 16px;
+      cursor: pointer;
+      width: 100%;
+    }
   </style>
 </head>
 <body>
@@ -52,7 +117,7 @@
     <thead>
       <tr>
         <th>回合</th>
-        <th>莊家</th>
+        <!-- 莊家欄位取消 -->
         <th>玩家1</th>
         <th>玩家2</th>
         <th>玩家3</th>
@@ -134,7 +199,6 @@
       document.getElementById("multiplier").value = 0;
       modal.style.display = "block";
     }
-
     function closeModal() { modal.style.display = "none"; }
 
     document.getElementById("chiHuBtn").addEventListener("click", function() {
@@ -170,7 +234,7 @@
         winnerButtonContainer.appendChild(btn);
       }
     }
-
+    
     function populateLoserButtons() {
       loserButtonContainer.innerHTML = "";
       for (let i = 1; i <= 4; i++) {
@@ -217,7 +281,7 @@
     document.getElementById("decreaseTai").addEventListener("click", function() {
       const input = document.getElementById("multiplier");
       let val = parseInt(input.value, 10) || 0;
-      if (val > 0) input.value = val - 1;
+      if (val > 0) { input.value = val - 1; }
     });
     document.getElementById("increaseTai").addEventListener("click", function() {
       const input = document.getElementById("multiplier");
@@ -225,17 +289,17 @@
       input.value = val + 1;
     });
 
-    // 計算分數
-    // 分數計算根據：
-    // - 莊家自摸：有效台數 = 輸入台數 + 1 + ((連莊數×2)+1)
-    //    → 有效分數 = 底分 + (有效台數 × 倍率)
-    //    → 莊家得分 = 有效分數 × 3；其他玩家各扣此有效分數。
-    // - 非莊家自摸：
-    //    → 非莊家自摸的有效台數 = 輸入台數 + 1
-    //       有效分數 (非莊家) = 底分 + ((輸入台數+1) × 倍率)
-    //    → 莊家失分以莊家公式計算：有效台數 = 輸入台數 + 1 + ((連莊數×2)+1)
-    //       有效分數 (莊家) = 底分 + ((輸入台數+1+((連莊數×2)+1)) × 倍率)
-    //    → 非莊家自摸得分 = (莊家失分) + 2×(其他非莊家失分)
+    // 計分邏輯：
+    // ※ 底分與倍率分別從設定中取得
+    // ※ 莊家自摸：有效台數 = 輸入台數 + 1 + ((連莊數×2)+1)
+    //     非莊家自摸：自摸玩家有效台數 = 輸入台數 + 1
+    //     但失分計算時，莊家以莊家公式計算 = 輸入台數 + 1 + ((連莊數×2)+1)
+    //     其他非莊家玩家以非莊家公式 = 輸入台數 + 1
+    // 得分：
+    //  - 莊家自摸：莊家得分 = 有效分數（莊家公式）× 3；其他玩家各扣該有效分數
+    //  - 非莊家自摸：自摸玩家得分 = (莊家失分) + 2×(其他非莊家失分)
+    //       其中，莊家失分 = 底分 + ((輸入台數+1+((連莊數×2)+1))×倍率)
+    //             其他非莊家失分 = 底分 + ((輸入台數+1)×倍率)
     document.getElementById("submitScore").addEventListener("click", function() {
       if (!selectedWinner) { alert("請選定胡牌玩家！"); return; }
       if (winType === "chiHu" && !selectedLoser) { alert("請選擇放槍玩家！"); return; }
@@ -245,7 +309,6 @@
       const rate = parseInt(document.getElementById("rateInput").value, 10);
       
       let effectiveTai, effectiveScore;
-      
       if (winType === "ziMo") {
         if (parseInt(selectedWinner) === parseInt(currentBanker)) {
           // 莊家自摸
@@ -253,32 +316,29 @@
           for (let i = 0; i < bankerStreak; i++) { bonusBanker += 2; }
           effectiveTai = inputTai + 1 + bonusBanker;
           effectiveScore = baseScore + (effectiveTai * rate);
-          // 莊家得分 = 有效分數 × 3
           scores[selectedWinner] += effectiveScore * 3;
-          // 其他玩家各扣 effectiveScore
           for (let p in scores) {
             if (p !== selectedWinner) { scores[p] -= effectiveScore; }
           }
         } else {
           // 非莊家自摸
-          effectiveTai = inputTai + 1;
+          effectiveTai = inputTai + 1; // 自摸玩家公式
           effectiveScore = baseScore + (effectiveTai * rate);
-          // 莊家的失分按莊家公式：
+          // 莊家失分以莊家公式計算
           let bankerTai = inputTai + 1 + ((bankerStreak * 2) + 1);
-          let bankerEffectiveScore = baseScore + (bankerTai * rate);
-          // 非莊家自摸得分 = 莊家失分 + 2 × (其他非莊家失分)
-          let otherEffectiveScore = effectiveScore; // 非莊家公式
-          let totalGain = bankerEffectiveScore + (otherEffectiveScore * 2);
+          let bankerScore = baseScore + (bankerTai * rate);
+          // 其他非莊家失分以非莊家公式計算
+          let otherTai = inputTai + 1;
+          let otherScore = baseScore + (otherTai * rate);
+          // 自摸玩家得分 = 莊家失分 + 2×(其他非莊家失分)
+          let totalGain = bankerScore + (otherScore * 2);
           scores[selectedWinner] += totalGain;
-          // 扣分：
-          // 莊家扣 bankerEffectiveScore
-          // 其他非莊家各扣 otherEffectiveScore
           for (let p in scores) {
             if (p !== selectedWinner) {
               if (parseInt(p) === parseInt(currentBanker)) {
-                scores[p] -= bankerEffectiveScore;
+                scores[p] -= bankerScore;
               } else {
-                scores[p] -= otherEffectiveScore;
+                scores[p] -= otherScore;
               }
             }
           }
@@ -292,7 +352,6 @@
       
       let displayBanker = currentBanker;
       let displayStreak = bankerStreak;
-      
       if (parseInt(selectedWinner) === parseInt(currentBanker)) {
         bankerStreak++;
       } else {
@@ -303,15 +362,15 @@
       round++;
       let tbody = document.getElementById("scoreTable").querySelector("tbody");
       let tr = document.createElement("tr");
+      // 取消顯示莊家欄位，僅顯示回合和玩家1~玩家4的分數
       tr.innerHTML = `<td>${round}</td>
-                      <td>玩家${displayBanker} (莊${displayStreak})</td>
                       <td>${scores['1']}</td>
                       <td>${scores['2']}</td>
                       <td>${scores['3']}</td>
                       <td>${scores['4']}</td>`;
       tbody.appendChild(tr);
       
-      currentBankerDisplay.innerText = "當前莊家：玩家" + currentBanker + " (莊" + bankerStreak + ")";
+      currentBankerDisplay.innerText = `當前莊家：玩家${currentBanker} (莊${bankerStreak})`;
       closeModal();
     });
     
