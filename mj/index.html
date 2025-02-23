@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <title>麻將計分系統 - 主畫面</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
+    body { font-family: Arial, sans-serif; margin: 10px; }
     .info, .section { margin-top: 10px; }
     .section { margin-top: 20px; }
     table, th, td {
@@ -12,15 +13,17 @@
       border-collapse: collapse;
       padding: 6px 8px;
       text-align: center;
+      font-size: 0.9rem;
     }
     input[type="number"] { width: 50px; text-align: center; }
-    button { font-size: 1rem; padding: 4px 8px; margin-right: 8px; cursor: pointer; }
+    button { font-size: 1rem; padding: 4px 8px; margin: 4px 2px; cursor: pointer; }
     /* 按鈕組樣式 */
     .button-group { display: inline-block; }
     .button-group button {
       margin-right: 4px;
       background-color: #eee;
       border: 1px solid #ccc;
+      padding: 6px 10px;
     }
     .button-group button.selected {
       background-color: #4285F4;
@@ -29,7 +32,7 @@
     }
     /* 模態框 (modal) 樣式 */
     .modal {
-      display: none; /* 預設隱藏 */
+      display: none;
       position: fixed;
       z-index: 1;
       left: 0;
@@ -41,10 +44,10 @@
     }
     .modal-content {
       background-color: #fefefe;
-      margin: 10% auto;
+      margin: 15% auto;
       padding: 20px;
       border: 1px solid #888;
-      width: 80%;
+      width: 90%;
       max-width: 500px;
       border-radius: 5px;
     }
@@ -60,8 +63,14 @@
     1. 獲勝玩家（a、b、c、d）<br>
     2. 計分方式（胡 或 自摸；若選胡則會顯示失分玩家選項）<br>
     3. 調整台數（旁邊有 ± 按鈕）<br>
-    計分規則採用 bonus、連莊、以及自摸時全部輸家額外扣 1 分等規則。<br>
-    ※ 【設定】按鈕可進入設定頁，設定玩家名稱、底分與倍率（計分結果最終會乘上倍率）。
+    計分規則：<br>
+    • 胡牌：<br>
+  – 若獲勝者為莊家 a，bonus = (連莊數×2)+1，得分 = (台數 + bonus + 底分)，對手扣分同值，連莊數累加；<br>
+  – 若非莊家胡牌，得分 = (台數 + 底分)，對手扣分同值，連莊數重置。<br>
+    • 自摸：<br>
+  – 莊家 a 自摸：a 得分 = 3×(台數 + bonus + 1 + 底分)，其他三家各扣 (台數 + bonus + 1 + 底分)，連莊數累加；<br>
+  – 非莊家自摸：a 失分 = (台數 + bonus + 1 + 底分)，其他非莊家玩家各失 (台數 + 1 + 底分)，自摸玩家得分 = 3×台數 + bonus + 3 + 3×底分，連莊數重置。<br>
+    ※ 【設定】按鈕可進入設定頁，設定玩家名稱、底分（每局計分時加減的分數）與倍率（計分結果乘以此倍率）。
   </p>
   
   <!-- 主畫面按鈕 -->
@@ -151,29 +160,17 @@
   
   <script>
     // 全域變數
-    // 預設玩家名稱、底分與倍率，若 localStorage 中有則讀取設定
+    // 讀取 localStorage 中的設定（若無則採預設值）
     var playerNames = { a: "a", b: "b", c: "c", d: "d" };
-    var baseScore = 0;
-    var multiplier = 1;
-    
-    function loadSettings() {
-      var storedNames = localStorage.getItem("playerNames");
-      var storedBase = localStorage.getItem("baseScore");
-      var storedMulti = localStorage.getItem("multiplier");
-      if(storedNames) {
-        playerNames = JSON.parse(storedNames);
-      }
-      if(storedBase) {
-        baseScore = parseFloat(storedBase);
-      }
-      if(storedMulti) {
-        multiplier = parseFloat(storedMulti);
-      }
+    var baseScore = parseFloat(localStorage.getItem("baseScore")) || 0;
+    var multiplier = parseFloat(localStorage.getItem("multiplier")) || 1;
+    var storedNames = localStorage.getItem("playerNames");
+    if (storedNames) {
+      playerNames = JSON.parse(storedNames);
     }
-    loadSettings();
     
-    // 初始總積分皆為底分
-    var totalScores = { a: baseScore, b: baseScore, c: baseScore, d: baseScore };
+    // 初始總積分設為 0（底分不再是初始積分，而是每局計分時加扣）
+    var totalScores = { a: 0, b: 0, c: 0, d: 0 };
     var roundResults = [];   // 每筆資料形如 { round: 1, a: ..., b: ..., c: ..., d: ... }
     var dealerCount = 0;
     var roundNumber = 1;
@@ -244,7 +241,7 @@
       closeModal('scoreModal');
     }
     
-    // 計分邏輯（規則與先前相同，最終結果乘上倍率）
+    // 計分邏輯（最終結果乘上倍率）
     function processCommand() {
       var winner = document.querySelector('#winnerGroup .select-button.selected').getAttribute('data-value');
       var scoreType = document.querySelector('#scoreTypeGroup .select-button.selected').getAttribute('data-value');
@@ -258,28 +255,33 @@
         if (winner === loser) { alert("獲勝玩家不能與失分玩家相同！"); return; }
         if (winner === 'a') {
           var bonus = (dealerCount * 2) + 1;
-          roundScore.a = points + bonus;
-          roundScore[loser] = -(points + bonus);
+          roundScore.a = points + bonus + baseScore;
+          roundScore[loser] = -(points + bonus + baseScore);
           dealerCount++;
         } else {
-          roundScore[winner] = points;
-          roundScore[loser] = -points;
+          roundScore[winner] = points + baseScore;
+          roundScore[loser] = -(points + baseScore);
           dealerCount = 0;
         }
       } else { // 自摸
         var bonus = (dealerCount * 2) + 1;
         if (winner === 'a') {
-          roundScore.a = 3 * (points + bonus + 1);
+          // 莊家自摸：其他三家各扣 (points + bonus + 1 + baseScore)
+          roundScore.a = 3 * (points + bonus + 1 + baseScore);
           ['b','c','d'].forEach(function(p) {
-            roundScore[p] = -(points + bonus + 1);
+            roundScore[p] = -(points + bonus + 1 + baseScore);
           });
           dealerCount++;
         } else {
-          roundScore[winner] = 3 * points + bonus + 3;
-          roundScore['a'] = -(points + bonus + 1);
+          // 非莊家自摸：
+          // 莊家 a 失分 = (points + bonus + 1 + baseScore)
+          // 其他非莊且非自摸者各失分 = (points + 1 + baseScore)
+          // 自摸玩家得分 = [3 * points + bonus + 3] + 3 * baseScore
+          roundScore[winner] = 3 * points + bonus + 3 + 3 * baseScore;
+          roundScore['a'] = -(points + bonus + 1 + baseScore);
           ['b','c','d'].forEach(function(p) {
             if (p !== winner && p !== 'a') {
-              roundScore[p] = -(points + 1);
+              roundScore[p] = -(points + 1 + baseScore);
             }
           });
           dealerCount = 0;
@@ -299,7 +301,7 @@
     }
     
     function resetScores() {
-      totalScores = { a: baseScore, b: baseScore, c: baseScore, d: baseScore };
+      totalScores = { a: 0, b: 0, c: 0, d: 0 };
       roundResults = [];
       dealerCount = 0;
       roundNumber = 1;
