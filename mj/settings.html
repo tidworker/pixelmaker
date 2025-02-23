@@ -17,19 +17,19 @@
     <h1>設定參數</h1>
     <form id="settingsForm">
       <label>玩家 A 名稱：
-        <input type="text" id="playerAName" value="a">
+        <input type="text" id="playerAName">
       </label>
       <label>玩家 B 名稱：
-        <input type="text" id="playerBName" value="b">
+        <input type="text" id="playerBName">
       </label>
       <label>玩家 C 名稱：
-        <input type="text" id="playerCName" value="c">
+        <input type="text" id="playerCName">
       </label>
       <label>玩家 D 名稱：
-        <input type="text" id="playerDName" value="d">
+        <input type="text" id="playerDName">
       </label>
-      <label>底分（每局計分時加扣）：
-        <input type="number" id="baseScoreInput" value="0">
+      <label>底分（每局計分時加或扣）：
+        <input type="number" id="baseScoreInput" step="any">
       </label>
       <label>倍率：
         <input type="number" id="multiplierInput" value="1" step="0.1">
@@ -39,6 +39,29 @@
   </div>
   
   <script>
+    // 頁面載入時，從 localStorage 讀取設定並填入表單
+    function loadSettings() {
+      var storedNames = localStorage.getItem("playerNames");
+      if (storedNames) {
+        var playerNames = JSON.parse(storedNames);
+        document.getElementById("playerAName").value = playerNames.a || "a";
+        document.getElementById("playerBName").value = playerNames.b || "b";
+        document.getElementById("playerCName").value = playerNames.c || "c";
+        document.getElementById("playerDName").value = playerNames.d || "d";
+      } else {
+        document.getElementById("playerAName").value = "a";
+        document.getElementById("playerBName").value = "b";
+        document.getElementById("playerCName").value = "c";
+        document.getElementById("playerDName").value = "d";
+      }
+      
+      var baseScore = localStorage.getItem("baseScore");
+      document.getElementById("baseScoreInput").value = (baseScore !== null) ? baseScore : 0;
+      
+      var multiplier = localStorage.getItem("multiplier");
+      document.getElementById("multiplierInput").value = (multiplier !== null) ? multiplier : 1;
+    }
+    
     function saveSettings() {
       var playerNames = {
         a: document.getElementById("playerAName").value || "a",
@@ -54,8 +77,11 @@
       localStorage.setItem("multiplier", multiplier);
       
       alert("設定已儲存！");
+      // 儲存完成後回到主畫面
       window.location.href = "index.html";
     }
+    
+    window.onload = loadSettings;
   </script>
 </body>
 </html>
