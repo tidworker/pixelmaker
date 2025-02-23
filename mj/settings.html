@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>麻將計分系統 - 設定</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     .container { max-width: 400px; margin: 0 auto; }
@@ -27,7 +28,7 @@
       <label>玩家 D 名稱：
         <input type="text" id="playerDName" value="d">
       </label>
-      <label>底分：
+      <label>底分（每局計分時加扣）：
         <input type="number" id="baseScoreInput" value="0">
       </label>
       <label>倍率：
@@ -53,7 +54,6 @@
       localStorage.setItem("multiplier", multiplier);
       
       alert("設定已儲存！");
-      // 儲存完成後回到主畫面
       window.location.href = "index.html";
     }
   </script>
