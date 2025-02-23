@@ -1,106 +1,60 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>設定玩家名稱</title>
+  <meta charset="UTF-8">
+  <title>麻將計分系統 - 設定</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 50px;
-      background-color: #f2f2f2;
-    }
-    h1 {
-      color: #333;
-    }
-    .player-input {
-      margin: 10px 0;
-      font-size: 18px;
-    }
-    .player-input input {
-      font-size: 18px;
-      width: 200px;
-      padding: 5px;
-      margin-left: 10px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-    }
-    button {
-      background-color: #4CAF50;
-      color: white;
-      padding: 10px 20px;
-      font-size: 16px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background-color 0.3s;
-      margin-top: 20px;
-    }
-    button:hover {
-      background-color: #45a049;
-    }
-    /* 提示訊息樣式 */
-    .message {
-      margin-top: 20px;
-      font-size: 16px;
-      color: green;
-    }
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .container { max-width: 400px; margin: 0 auto; }
+    label { display: block; margin-top: 10px; }
+    input[type="text"], input[type="number"] { width: 100%; padding: 6px; box-sizing: border-box; }
+    button { font-size: 1rem; padding: 6px 12px; margin-top: 20px; cursor: pointer; }
   </style>
 </head>
 <body>
-  <h1>設定玩家名稱</h1>
-
-  <div class="player-input">
-    <label>玩家1：<input type="text" id="player1" placeholder="例如：張三"/></label>
+  <div class="container">
+    <h1>設定參數</h1>
+    <form id="settingsForm">
+      <label>玩家 A 名稱：
+        <input type="text" id="playerAName" value="a">
+      </label>
+      <label>玩家 B 名稱：
+        <input type="text" id="playerBName" value="b">
+      </label>
+      <label>玩家 C 名稱：
+        <input type="text" id="playerCName" value="c">
+      </label>
+      <label>玩家 D 名稱：
+        <input type="text" id="playerDName" value="d">
+      </label>
+      <label>底分：
+        <input type="number" id="baseScoreInput" value="0">
+      </label>
+      <label>倍率：
+        <input type="number" id="multiplierInput" value="1" step="0.1">
+      </label>
+      <button type="button" onclick="saveSettings()">儲存設定</button>
+    </form>
   </div>
-  <div class="player-input">
-    <label>玩家2：<input type="text" id="player2" placeholder="例如：李四"/></label>
-  </div>
-  <div class="player-input">
-    <label>玩家3：<input type="text" id="player3" placeholder="例如：王五"/></label>
-  </div>
-  <div class="player-input">
-    <label>玩家4：<input type="text" id="player4" placeholder="例如：陳六"/></label>
-  </div>
-
-  <button onclick="savePlayerNames()">儲存設定</button>
-
-  <!-- 提示訊息 -->
-  <div class="message" id="saveMessage"></div>
-
+  
   <script>
-    // 載入現有資料 (若有)
-    window.onload = function() {
-      const storedNames = JSON.parse(localStorage.getItem('mahjongPlayerNames'));
-      if (storedNames) {
-        document.getElementById('player1').value = storedNames[0] || '';
-        document.getElementById('player2').value = storedNames[1] || '';
-        document.getElementById('player3').value = storedNames[2] || '';
-        document.getElementById('player4').value = storedNames[3] || '';
-      }
-    };
-
-    function savePlayerNames() {
-      const names = [
-        document.getElementById('player1').value.trim() || '玩家1',
-        document.getElementById('player2').value.trim() || '玩家2',
-        document.getElementById('player3').value.trim() || '玩家3',
-        document.getElementById('player4').value.trim() || '玩家4',
-      ];
-      localStorage.setItem('mahjongPlayerNames', JSON.stringify(names));
+    function saveSettings() {
+      var playerNames = {
+        a: document.getElementById("playerAName").value || "a",
+        b: document.getElementById("playerBName").value || "b",
+        c: document.getElementById("playerCName").value || "c",
+        d: document.getElementById("playerDName").value || "d"
+      };
+      var baseScore = parseFloat(document.getElementById("baseScoreInput").value) || 0;
+      var multiplier = parseFloat(document.getElementById("multiplierInput").value) || 1;
       
-      // 顯示提示訊息
-      const messageDiv = document.getElementById('saveMessage');
-      messageDiv.textContent = '玩家名稱已儲存！';
+      localStorage.setItem("playerNames", JSON.stringify(playerNames));
+      localStorage.setItem("baseScore", baseScore);
+      localStorage.setItem("multiplier", multiplier);
       
-      // 自動刷新上方的 p1.html iframe
-      if (window.parent && window.parent.document) {
-        const p1Frame = window.parent.document.getElementById('p1Frame');
-        if (p1Frame) {
-          p1Frame.contentWindow.location.reload();
-        }
-      }
+      alert("設定已儲存！");
+      // 儲存完成後回到主畫面
+      window.location.href = "index.html";
     }
   </script>
 </body>
