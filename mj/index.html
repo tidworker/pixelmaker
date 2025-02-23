@@ -63,14 +63,11 @@
     1. 獲勝玩家（a、b、c、d）<br>
     2. 計分方式（胡 或 自摸；若選胡則會顯示失分玩家選項）<br>
     3. 調整台數（旁邊有 ± 按鈕）<br>
-    計分規則：<br>
-    • 胡牌：<br>
-  – 若獲勝者為莊家 a，bonus = (連莊數×2)+1，得分 = (台數 + bonus + 底分)，對手扣分同值，連莊數累加；<br>
-  – 若非莊家胡牌，得分 = (台數 + 底分)，對手扣分同值，連莊數重置。<br>
-    • 自摸：<br>
-  – 莊家 a 自摸：a 得分 = 3×(台數 + bonus + 1 + 底分)，其他三家各扣 (台數 + bonus + 1 + 底分)，連莊數累加；<br>
-  – 非莊家自摸：a 失分 = (台數 + bonus + 1 + 底分)，其他非莊家玩家各失 (台數 + 1 + 底分)，自摸玩家得分 = 3×台數 + bonus + 3 + 3×底分，連莊數重置。<br>
-    ※ 【設定】按鈕可進入設定頁，設定玩家名稱、底分（每局計分時加減的分數）與倍率（計分結果乘以此倍率）。
+    計分公式：分數 = (台數 × 倍率) + 底分<br>
+    胡牌時，獲勝者得分為此公式值，失分者扣相同數值；<br>
+    自摸時，若莊家自摸則獲勝者得分為 3×公式值，其它三家各扣公式值；<br>
+    若非莊家自摸，則自摸玩家得分為 3×公式值，莊家及其他輸家各扣公式值。<br>
+    ※ 【設定】按鈕可進入設定頁，設定玩家名稱、底分與倍率。
   </p>
   
   <!-- 主畫面按鈕 -->
@@ -79,7 +76,6 @@
   <button type="button" onclick="resetScores()">清空分數</button>
   
   <div class="info">
-    當前莊數：<span id="dealerCountDisplay">0</span>　
     當前局數：<span id="roundDisplay">1</span>
   </div>
   
@@ -159,7 +155,6 @@
   </div>
   
   <script>
-    // 全域變數
     // 讀取 localStorage 中的設定（若無則採預設值）
     var playerNames = { a: "a", b: "b", c: "c", d: "d" };
     var baseScore = parseFloat(localStorage.getItem("baseScore")) || 0;
@@ -169,15 +164,13 @@
       playerNames = JSON.parse(storedNames);
     }
     
-    // 初始總積分設為 0（底分不再是初始積分，而是每局計分時加扣）
-    var totalScores = { a: 0, b: 0, c: 0, d: 0 };
-    var roundResults = [];   // 每筆資料形如 { round: 1, a: ..., b: ..., c: ..., d: ... }
-    var dealerCount = 0;
+    // 設定全域變數
+    var totalScores = { a: 0, b: 0, c: 0, d: 0 };  // 每局計分後更新
+    var roundResults = [];  // 每筆資料形如 { round: 1, a: ..., b: ..., c: ..., d: ... }
     var roundNumber = 1;
     
-    // 更新畫面：顯示當前莊數、局數、每局計分表、總積分及玩家名稱
+    // 更新畫面：顯示局數、每局計分表、總積分及玩家名稱
     function updateDisplay() {
-      document.getElementById('dealerCountDisplay').innerText = dealerCount;
       document.getElementById('roundDisplay').innerText = roundNumber;
       
       document.getElementById('totalScoreA').innerText = totalScores.a;
@@ -241,59 +234,49 @@
       closeModal('scoreModal');
     }
     
-    // 計分邏輯（最終結果乘上倍率）
+    // 計分邏輯：根據選項計算分數
+    // 計算公式：分數 = (台數 × multiplier) + baseScore
     function processCommand() {
       var winner = document.querySelector('#winnerGroup .select-button.selected').getAttribute('data-value');
       var scoreType = document.querySelector('#scoreTypeGroup .select-button.selected').getAttribute('data-value');
       var points = parseInt(document.getElementById("pointsInput").value);
       if (isNaN(points) || points < 0) { alert("請輸入正確台數！"); return; }
       
+      // 計算單一局的分數值
+      var S = (points * multiplier) + baseScore;
+      
+      // 記錄本局分數
       var roundScore = { a: 0, b: 0, c: 0, d: 0, round: roundNumber };
       
       if (scoreType === "hu") {
+        // 胡牌：勝者得分，失分玩家扣相同值
+        roundScore[winner] = S;
+        // 取得失分玩家
         var loser = document.querySelector('#loserGroup .select-button.selected').getAttribute('data-value');
         if (winner === loser) { alert("獲勝玩家不能與失分玩家相同！"); return; }
-        if (winner === 'a') {
-          var bonus = (dealerCount * 2) + 1;
-          roundScore.a = points + bonus + baseScore;
-          roundScore[loser] = -(points + bonus + baseScore);
-          dealerCount++;
-        } else {
-          roundScore[winner] = points + baseScore;
-          roundScore[loser] = -(points + baseScore);
-          dealerCount = 0;
-        }
+        roundScore[loser] = -S;
       } else { // 自摸
-        var bonus = (dealerCount * 2) + 1;
+        // 自摸：勝者得分 = 3 * S，其它玩家各扣 S
+        roundScore[winner] = 3 * S;
+        // 若自摸者為莊家 a
         if (winner === 'a') {
-          // 莊家自摸：其他三家各扣 (points + bonus + 1 + baseScore)
-          roundScore.a = 3 * (points + bonus + 1 + baseScore);
-          ['b','c','d'].forEach(function(p) {
-            roundScore[p] = -(points + bonus + 1 + baseScore);
-          });
-          dealerCount++;
+          ['b','c','d'].forEach(function(p) { roundScore[p] = -S; });
         } else {
-          // 非莊家自摸：
-          // 莊家 a 失分 = (points + bonus + 1 + baseScore)
-          // 其他非莊且非自摸者各失分 = (points + 1 + baseScore)
-          // 自摸玩家得分 = [3 * points + bonus + 3] + 3 * baseScore
-          roundScore[winner] = 3 * points + bonus + 3 + 3 * baseScore;
-          roundScore['a'] = -(points + bonus + 1 + baseScore);
+          roundScore['a'] = -S;
           ['b','c','d'].forEach(function(p) {
             if (p !== winner && p !== 'a') {
-              roundScore[p] = -(points + 1 + baseScore);
+              roundScore[p] = -S;
             }
           });
-          dealerCount = 0;
         }
       }
       
-      // 記錄本局結果，並將各玩家本局分數乘上倍率後加入累積總分
+      // 記錄本局結果，並更新累積總分（每局結果乘上倍率已在 S 中計算）
       roundResults.push(roundScore);
-      totalScores.a += roundScore.a * multiplier;
-      totalScores.b += roundScore.b * multiplier;
-      totalScores.c += roundScore.c * multiplier;
-      totalScores.d += roundScore.d * multiplier;
+      totalScores.a += roundScore.a;
+      totalScores.b += roundScore.b;
+      totalScores.c += roundScore.c;
+      totalScores.d += roundScore.d;
       
       roundNumber++;
       updateDisplay();
@@ -303,7 +286,6 @@
     function resetScores() {
       totalScores = { a: 0, b: 0, c: 0, d: 0 };
       roundResults = [];
-      dealerCount = 0;
       roundNumber = 1;
       updateDisplay();
       document.getElementById("pointsInput").value = 0;
