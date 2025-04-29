@@ -1,137 +1,42 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
+<!DOCTYPE html><html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>麻將計分</title>
   <style>
-    /* 全域重置 */
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-      font-family: sans-serif;
-    }
-    /* 主體背景、文字、排版 */
-    body {
-      background: #000;
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2vh;
-      padding: 2vh;
-    }
-    /* 原本玩家按鈕樣式，作為基底 */
-    .btn {
-      width: 44%;
-      max-width: 140px;
-      padding: 3vh 0;
-      margin: 1vh;
-      border: 2px solid orange;
-      border-radius: 10px;
-      background: #000;
-      color: #fff;
-      font-size: 18px;
-      text-align: center;
-      user-select: none;
-    }
-    .btn:active,
-    .mbtn:active {
-      background: #222;
-    }
-    .dealer {
-      border-color: red !important;
-    }
-    /* 分數顯示格線 */
-    .grid {
-      display: grid;
-      gap: 2vw;
-      width: 100%;
-      max-width: 420px;
-    }
-    /* 單格樣式 */
-    .cell {
-      border: 2px solid orange;
-      border-radius: 8px;
-      padding: 1.2vh 0;
-      text-align: center;
-    }
-    /* Modal */
-    .modal {
-      position: fixed;
-      inset: 0;
-      display: none;
-      justify-content: center;
-      align-items: center;
-      background: rgba(0,0,0,.7);
-      z-index: 99;
-    }
-    .box {
-      background: #111;
-      border: 2px solid orange;
-      border-radius: 10px;
-      padding: 4vh;
-      width: 90%;
-      max-width: 320px;
-      text-align: center;
-    }
-    .mbtn {
-      width: 80%;
-      padding: 2vh 0;
-      margin: 1.5vh auto;
-      border: 2px solid orange;
-      border-radius: 8px;
-      background: #000;
-      color: #fff;
-      font-size: 18px;
-      user-select: none;
-    }
-    input {
-      width: 120px;
-      padding: 8px;
-      font-size: 18px;
-      text-align: center;
-      border-radius: 6px;
-      border: none;
-    }
-
-    /* === 手機版：讓四個玩家按鈕平分 1/4 寬度，並保留 6px 間距 === */
-    #players {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
-      width: 100%;
-      max-width: none;
-    }
-    /* 讓 #players 裡的 .btn 撐滿各自格子 */
-    #players .btn {
-      width: 100%;
-      margin: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; font-family: sans-serif; }
+    body { background: #000; color: #fff; display: flex; flex-direction: column; align-items: center; gap: 2vh; padding: 2vh; }
+    .btn { padding: 3vh 0; border: 2px solid orange; border-radius: 10px; background: #000; color: #fff; font-size: 18px; text-align: center; user-select: none; }
+    .btn:active, .mbtn:active { background: #222; }
+    .dealer { border-color: red !important; }
+    #roundDisplay { font-size: 20px; color: #ffa500; margin-bottom: 1vh; }
+    #players { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; }
+    #players .btn { width: 100%; margin: 0; }
+    #latestResult { margin-top: 2vh; font-size: 18px; color: #ffa500; }
+    #statsTable { width: 100%; max-width: 420px; border-collapse: collapse; margin-top: 1vh; }
+    #statsTable th, #statsTable td { border: 2px solid orange; padding: 1vh; text-align: center; }
+    #statsTable th { background: #111; }
+    .modal { position: fixed; inset: 0; display: none; justify-content: center; align-items: center; background: rgba(0,0,0,.7); z-index: 99; }
+    .box { background: #111; border: 2px solid orange; border-radius: 10px; padding: 4vh; width: 90%; max-width: 320px; text-align: center; }
+    .mbtn { width: 80%; padding: 2vh 0; margin: 1.5vh auto; border: 2px solid orange; border-radius: 8px; background: #000; color: #fff; font-size: 18px; user-select: none; }
+    input[type="number"], input[type="text"] { width: 120px; padding: 8px; font-size: 18px; text-align: center; border-radius: 6px; border: none; margin-bottom: 1vh; }
   </style>
 </head>
 <body>
-
-  <!-- 分數顯示 -->
-  <div class="grid" id="scoreGrid">
-    <div id="S東" class="cell">東 0</div>
-    <div id="S南" class="cell">南 0</div>
-    <div id="S西" class="cell">西 0</div>
-    <div id="S北" class="cell">北 0</div>
-  </div>
-
-  <!-- 玩家按鈕 -->
-  <div class="grid" id="players">
+  <!-- 局數顯示 -->
+  <div id="roundDisplay"></div>  <!-- 玩家按鈕 -->  <div id="players">
     <div class="btn" data-p="東">東</div>
     <div class="btn" data-p="南">南</div>
     <div class="btn" data-p="西">西</div>
     <div class="btn" data-p="北">北</div>
-  </div>
+  </div>  <!-- 最新一局結果 -->  <div id="latestResult"></div>  <!-- 記錄表格 -->  <table id="statsTable">
+    <thead>
+      <tr><th>玩家</th><th>總積分</th><th>自摸</th><th>吃胡</th><th>放槍</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>  <!-- 設定按鈕 --><button class="mbtn" id="settingsBtn">設定</button>
 
-  <!-- Modal -->
-  <div id="modal" class="modal">
+  <!-- 結算 Modal -->  <div id="modal" class="modal">
     <div class="box">
       <h3 id="title">選擇</h3>
       <div id="A">
@@ -147,132 +52,168 @@
         <p id="tipC" style="margin-bottom:1vh">台數</p>
         <input id="tai" type="number" min="0" value="0">
         <button class="mbtn" id="ok">確定</button>
-        <button class="mbtn" id="backPrev" style="margin-top:.5vh">返回</button>
+        <button class="mbtn" id="backPrev">返回</button>
       </div>
     </div>
-  </div>
-
-<script>
-  /* === 固定參數 === */
-  const BASE = 50;  // 底分
-  const MUL  = 20;  // 台數倍率
-
-  /* === 資料結構 === */
+  </div>  <!-- 設定 Modal -->  <div id="settingsModal" class="modal">
+    <div class="box">
+      <h3>設定</h3>
+      <label>東 <input type="text" id="name東"></label><br>
+      <label>南 <input type="text" id="name南"></label><br>
+      <label>西 <input type="text" id="name西"></label><br>
+      <label>北 <input type="text" id="name北"></label><br>
+      <button class="mbtn" id="saveNames">儲存名稱</button>
+      <button class="mbtn" id="clearLatest">還原上一局</button>
+      <button class="mbtn" id="clearAll">清空所有分數</button>
+      <button class="mbtn" id="cancelSettings">取消</button>
+    </div>
+  </div><script>
+  const BASE = 50, MUL = 20;
   const P = ["東","南","西","北"];
-  const score = {東:0,南:0,西:0,北:0};
+  const stats = {}, displayName = {};
+  P.forEach(p => { stats[p] = { score:0,zimo:0,chi:0,gun:0 }; displayName[p] = p; });
   let dealer = "東", consec = 0;
 
-  /* === DOM 快取 === */
-  const scoreEls = {}; P.forEach(p => scoreEls[p] = document.getElementById("S"+p));
+  // 局數列表與索引
+  const roundNames = P.flatMap(pr => P.map(sc => pr + sc));
+  let roundIndex = 0;
+
+  // 歷史快照（用於還原）
+  let history = [];
+
+  const roundEl = document.getElementById("roundDisplay");
   const playersDiv = document.getElementById("players");
-  const modal      = document.getElementById("modal");
-  const stepA      = document.getElementById("A");
-  const stepB      = document.getElementById("B");
-  const stepC      = document.getElementById("C");
-  const titleEl    = document.getElementById("title");
-  const gunsDiv    = document.getElementById("guns");
-  const tipC       = document.getElementById("tipC");
-  const taiInput   = document.getElementById("tai");
-  const closeM     = document.getElementById("closeM");
-  const backA      = document.getElementById("backA");
-  const backPrev   = document.getElementById("backPrev");
-  const okBtn      = document.getElementById("ok");
+  const latestEl = document.getElementById("latestResult");
+  const modal = document.getElementById("modal");
+  const settingsBtn = document.getElementById("settingsBtn");
+  const settingsModal = document.getElementById("settingsModal");
+  const titleEl = document.getElementById("title");
+  const gunsDiv = document.getElementById("guns");
+  const tipC = document.getElementById("tipC");
+  const taiInput = document.getElementById("tai");
+  const closeM = document.getElementById("closeM");
+  const backA = document.getElementById("backA");
+  const backPrev = document.getElementById("backPrev");
+  const okBtn = document.getElementById("ok");
+  const saveNames = document.getElementById("saveNames");
+  const clearLatest = document.getElementById("clearLatest");
+  const clearAll = document.getElementById("clearAll");
+  const cancelSettings = document.getElementById("cancelSettings");
+
+  function updateRound() {
+    roundEl.textContent = `局數：${roundNames[roundIndex]}`;
+  }
+  function updateDealerUI() {
+    document.querySelectorAll("#players .btn").forEach(b => {
+      b.textContent = displayName[b.dataset.p];
+      b.classList.toggle("dealer", b.dataset.p === dealer);
+    });
+  }
+  function updateStatsTable() {
+    const tbody = document.querySelector("#statsTable tbody"); tbody.innerHTML = "";
+    P.forEach(p => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${displayName[p]}</td><td>${stats[p].score}</td><td>${stats[p].zimo}</td><td>${stats[p].chi}</td><td>${stats[p].gun}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // 設定按鈕事件
+  settingsBtn.onclick = () => settingsModal.style.display = "flex";
+  cancelSettings.onclick = () => settingsModal.style.display = "none";
+  saveNames.onclick = () => {
+    P.forEach(p => { const val = document.getElementById(`name${p}`).value.trim(); if(val) displayName[p] = val; });
+    updateDealerUI(); updateStatsTable(); settingsModal.style.display = "none";
+  };
+  clearLatest.onclick = () => {
+    if(history.length === 0) { alert("沒有上一局可還原"); return; }
+    const prev = history.pop();
+    P.forEach(p => Object.assign(stats[p], prev.stats[p]));
+    roundIndex = prev.roundIndex;
+    latestEl.textContent = prev.latest;
+    dealer = prev.dealer;
+    consec = prev.consec;
+    updateRound(); updateDealerUI(); updateStatsTable(); settingsModal.style.display = "none";
+  };
+  clearAll.onclick = () => {
+    history = [];
+    P.forEach(p => stats[p] = { score:0,zimo:0,chi:0,gun:0 });
+    roundIndex = 0;
+    latestEl.textContent = "";
+    dealer = "東"; consec = 0;
+    updateRound(); updateDealerUI(); updateStatsTable(); settingsModal.style.display = "none";
+  };
 
   const nextSeat = p => P[(P.indexOf(p)+1)%4];
+  let winner = "", gunner = "", mode = "";
 
-  /* === UI 更新 === */
-  function updateBoard(){
-    P.forEach(p=>scoreEls[p].textContent = `${p} ${score[p]}`);
-  }
-  function updateDealerUI(){
-    document.querySelectorAll(".btn").forEach(b=>b.classList.toggle("dealer",b.dataset.p===dealer));
-    P.forEach(p=>scoreEls[p].classList.toggle("dealer", p===dealer));
-  }
-  function show(a,b,c){
-    stepA.style.display=a;
-    stepB.style.display=b;
-    stepC.style.display=c;
-  }
-
-  /* === 主流程 === */
-  let winner="", gunner="", mode="";
+  // 玩家點擊選擇結算方式
   playersDiv.onclick = e => {
-    const p = e.target.dataset.p;
-    if(!p) return;
-    winner = p;
-    titleEl.textContent = `${p} 胡牌方式`;
-    show("block","none","none");
+    const p = e.target.dataset.p; if(!p) return;
+    winner = p; titleEl.textContent = `${displayName[p]} 胡牌方式`;
+    document.getElementById("A").style.display="block";
+    document.getElementById("B").style.display="none";
+    document.getElementById("C").style.display="none";
     modal.style.display = "flex";
   };
-
-  stepA.onclick = e => {
-    const act = e.target.dataset.act;
-    if(!act) return;
-    mode = act;
-    if(mode==="chi"){
-      gunsDiv.innerHTML="";
-      P.filter(p=>p!==winner).forEach(p=>{
-        const btn = document.createElement("button");
-        btn.className = "mbtn";
-        btn.textContent = p;
-        btn.onclick = ()=>{
-          gunner = p;
-          tipC.textContent = `放槍 ${p} 台數`;
-          show("none","none","block");
-        };
+  document.getElementById("A").onclick = e => {
+    const act = e.target.dataset.act; if(!act) return; mode = act;
+    if(mode === "chi"){
+      gunsDiv.innerHTML = "";
+      P.filter(p => p !== winner).forEach(p => {
+        const btn = document.createElement("button"); btn.className = "mbtn"; btn.textContent = displayName[p];
+        btn.onclick = () => { gunner = p; tipC.textContent = `放槍 ${displayName[p]} 台數`; document.getElementById("A").style.display="none"; document.getElementById("C").style.display="block"; };
         gunsDiv.appendChild(btn);
       });
-      show("none","block","none");
+      document.getElementById("A").style.display="none"; document.getElementById("B").style.display="block";
     } else {
-      gunner="";
-      tipC.textContent = `${winner} 自摸 台數`;
-      show("none","none","block");
+      gunner = ""; tipC.textContent = `${displayName[winner]} 自摸 台數`;
+      document.getElementById("A").style.display="none"; document.getElementById("C").style.display="block";
     }
   };
+  closeM.onclick = () => modal.style.display = "none";
+  backA.onclick = () => { document.getElementById("A").style.display="block"; document.getElementById("B").style.display="none"; };
+  backPrev.onclick = () => { document.getElementById("A").style.display="block"; document.getElementById("C").style.display="none"; };
 
-  closeM.onclick    = ()=>modal.style.display="none";
-  backA.onclick     = ()=>show("block","none","none");
-  backPrev.onclick  = ()=>mode==="chi"? show("none","block","none"): show("block","none","none");
+  okBtn.onclick = () => {
+    // 歷史快照
+    const snapshot = { stats: {}, latest: latestEl.textContent, roundIndex, dealer, consec };
+    P.forEach(p => snapshot.stats[p] = { ...stats[p] });
+    history.push(snapshot);
 
-  okBtn.onclick = ()=>{
-    const t = parseInt(taiInput.value,10);
-    if(isNaN(t)||t<0){ alert("台數?"); return; }
-
-    const raw   = t * MUL;
-    const bonus = (consec*2+1) * MUL;
-    const baseU = BASE + raw;
-    const delta = {東:0,南:0,西:0,北:0};
-
-    if(mode==="chi"){
-      // A=-1 for loser; B=-1 if loser===dealer || winner===dealer
-      const loseB = (gunner===dealer||winner===dealer)? -1 : 0;
-      // －baseU + B×bonus
-      delta[gunner] = -baseU + loseB * bonus;
-    } else {
-      P.filter(p=>p!==winner).forEach(p=>{
-        const loseB = (p===dealer||winner===dealer)? -1 : 0;
-        delta[p] = -baseU + loseB * bonus;
-      });
-    }
-
-    // 勝方得分 = -Σ敗方
+    // 計算分數
+    const t = parseInt(taiInput.value, 10); if(isNaN(t)||t<0){ alert("台數?"); return; }
+    const raw = t * MUL, bonus = (consec * 2 + 1) * MUL, baseU = BASE + raw;
+    const delta = { 東:0, 南:0, 西:0, 北:0 };
+    if(mode === "chi") { const loseB = (gunner===dealer||winner===dealer)?-1:0; delta[gunner] = -baseU + loseB * bonus; }
+    else { P.filter(p=>p!==winner).forEach(p=>{ const loseB=(p===dealer||winner===dealer)?-1:0; delta[p] = -baseU + loseB * bonus; }); }
     delta[winner] = -P.reduce((s,p)=>s+delta[p],0);
+    P.forEach(p=>stats[p].score += delta[p]); if(mode==="zi") stats[winner].zimo++; if(mode==="chi"){ stats[winner].chi++; stats[gunner].gun++; }
 
-    // 寫回
-    P.forEach(p=>score[p]+=delta[p]);
+    // 更新最新結果
+    latestEl.textContent = mode==="chi" ?
+      `${displayName[winner]}吃胡${displayName[gunner]} ${t}台 ${delta[winner]}分` :
+      `${displayName[winner]}自摸 ${t}台 ${delta[winner]}分`;
 
-    // 連莊
-    if(winner===dealer) consec++;
-    else{ dealer=nextSeat(dealer); consec=0; }
+    // 處理莊家與局數
+    const prevDealer = dealer, prevRound = roundIndex;
+    if(winner === dealer) {
+      consec++;
+    } else {
+      dealer = nextSeat(dealer); consec = 0;
+      roundIndex = (roundIndex + 1) % roundNames.length;
+    }
+    updateRound(); updateDealerUI(); updateStatsTable();
 
-    updateBoard();
-    updateDealerUI();
-    modal.style.display="none";
+    // 北北完成提示
+    if(prevRound === roundNames.length - 1 && prevDealer !== dealer) {
+      alert('完成一將');
+    }
+
+    modal.style.display = "none";
   };
 
-  // 初始化
-  updateBoard();
-  updateDealerUI();
-</script>
-</body>
+  // 初始
+  updateRound(); updateDealerUI(); updateStatsTable();
+</script></body>
 </html>
