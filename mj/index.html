@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="zh-Hant">
+<!DOCTYPE html>
+<html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -9,7 +10,7 @@
     .btn { padding: 3vh 0; border: 2px solid orange; border-radius: 10px; background: #000; color: #fff; font-size: 18px; text-align: center; user-select: none; }
     .btn:active, .mbtn:active { background: #222; }
     .dealer { border-color: red !important; }
-    #roundDisplay { font-size: 20px; color: #ffa500; margin-bottom: 1vh; }
+    #header { display: flex; align-items: center; width: 100%; max-width: 420px; justify-content: space-between; color: #ffa500; font-size: 20px; margin-bottom: 1vh; }
     #players { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; }
     #players .btn { width: 100%; margin: 0; }
     #latestResult { margin-top: 2vh; font-size: 18px; color: #ffa500; }
@@ -23,7 +24,11 @@
   </style>
 </head>
 <body>
-  <div id="roundDisplay"></div>
+  <div id="header">
+    <div id="roundDisplay"></div>
+    <div id="dealerCount"></div>
+    <div id="configDisplay"></div>
+  </div>
   <div id="players">
     <div class="btn" data-p="東">東</div>
     <div class="btn" data-p="南">南</div>
@@ -35,7 +40,8 @@
     <thead><tr><th>玩家</th><th>總積分</th><th>自摸</th><th>吃胡</th><th>放槍</th></tr></thead>
     <tbody></tbody>
   </table>
-  <button class="mbtn" id="settingsBtn">設定</button>  <div id="modal" class="modal">
+  <button class="mbtn" id="settingsBtn">設定</button>
+  <div id="modal" class="modal">
     <div class="box">
       <h3 id="title">選擇</h3>
       <div id="A">
@@ -51,163 +57,156 @@
         <p id="tipC" style="margin-bottom:1vh">台數</p>
         <div style="display:flex;justify-content:center;align-items:center;gap:1vh;margin-bottom:1vh">
           <button class="mbtn" id="minusTai">－</button>
-          <input id="tai" type="number" min="0" value="0" style="width:80px;">
+          <input id="tai" type="number" min="0" value="0">
           <button class="mbtn" id="plusTai">＋</button>
         </div>
         <button class="mbtn" id="ok">確定</button>
         <button class="mbtn" id="backPrev">返回</button>
       </div>
     </div>
-  </div>  <div id="settingsModal" class="modal">
+  </div>
+  <div id="settingsModal" class="modal">
     <div class="box">
       <h3>設定</h3>
+      <label>底分 <input type="number" id="baseInput" min="0"></label><br>
+      <label>台分 <input type="number" id="mulInput" min="0"></label><br>
       <label>東 <input type="text" id="name東"></label><br>
       <label>南 <input type="text" id="name南"></label><br>
       <label>西 <input type="text" id="name西"></label><br>
       <label>北 <input type="text" id="name北"></label><br>
-      <button class="mbtn" id="saveNames">儲存名稱</button>
+      <button class="mbtn" id="saveNames">儲存設定</button>
       <button class="mbtn" id="clearLatest">還原上一局</button>
       <button class="mbtn" id="clearAll">清空所有分數</button>
       <button class="mbtn" id="cancelSettings">取消</button>
     </div>
-  </div>  <script>
-    const BASE = 50, MUL = 20;
-    const P = ["東","南","西","北"];
-    const stats = {}, displayName = {};
-    P.forEach(p => { stats[p] = { score:0, zimo:0, chi:0, gun:0 }; displayName[p] = p; });
-
-    function loadStats() {
-      const stored = localStorage.getItem("mjStats");
-      if (stored) {
-        const obj = JSON.parse(stored);
-        P.forEach(p => { if (obj[p]) stats[p] = obj[p]; });
-      }
+  </div>
+<script>
+let BASE, MUL;
+const CONFIG_KEY = 'mjConfig';
+let config = {base:50,mul:20};
+function loadConfig(){
+  const s = localStorage.getItem(CONFIG_KEY);
+  if(s) config = JSON.parse(s);
+  BASE = config.base; MUL = config.mul;
+  document.getElementById('baseInput').value = BASE;
+  document.getElementById('mulInput').value = MUL;
+}
+function saveConfig(){
+  const b = parseInt(document.getElementById('baseInput').value) || 0;
+  const m = parseInt(document.getElementById('mulInput').value) || 0;
+  config.base = b; config.mul = m;
+  BASE = b; MUL = m;
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  updateHeader();
+}
+const P = ['東','南','西','北'];
+const stats = {}, displayName = {};
+P.forEach(p => { stats[p] = {score:0, zimo:0, chi:0, gun:0}; displayName[p] = p; });
+function loadStats(){
+  const s = localStorage.getItem('mjStats');
+  if(s) Object.assign(stats, JSON.parse(s));
+}
+function saveStats(){ localStorage.setItem('mjStats', JSON.stringify(stats)); }
+loadStats(); loadConfig();
+let dealer = '東', consec = 0;
+const roundNames = P.flatMap(pr => P.map(sc => pr + sc));
+let roundIndex = 0, history = [];
+const roundEl = document.getElementById('roundDisplay');
+const dealerEl = document.getElementById('dealerCount');
+const configEl = document.getElementById('configDisplay');
+const playersDiv = document.getElementById('players');
+const latestEl = document.getElementById('latestResult');
+const modal = document.getElementById('modal');
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsModal = document.getElementById('settingsModal');
+const titleEl = document.getElementById('title');
+const gunsDiv = document.getElementById('guns');
+const taiInput = document.getElementById('tai');
+const closeM = document.getElementById('closeM');
+const backA = document.getElementById('backA');
+const backPrev = document.getElementById('backPrev');
+const okBtn = document.getElementById('ok');
+const saveNames = document.getElementById('saveNames');
+const clearLatest = document.getElementById('clearLatest');
+const clearAll = document.getElementById('clearAll');
+const cancelSettings = document.getElementById('cancelSettings');
+function updateHeader(){
+  roundEl.textContent = `局數：${roundNames[roundIndex]}`;
+  dealerEl.textContent = `莊${consec}`;
+  configEl.textContent = `${BASE}/${MUL}`;
+}
+function updateDealerUI(){
+  document.querySelectorAll('#players .btn').forEach(b => {
+    b.textContent = displayName[b.dataset.p];
+    b.classList.toggle('dealer', b.dataset.p === dealer);
+  });
+}
+function updateStatsTable(){
+  const tb = document.querySelector('#statsTable tbody'); tb.innerHTML = '';
+  P.forEach(p => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${displayName[p]}</td><td>${stats[p].score}</td><td>${stats[p].zimo}</td><td>${stats[p].chi}</td><td>${stats[p].gun}</td>`;
+    tb.appendChild(tr);
+  });
+}
+settingsBtn.onclick = () => settingsModal.style.display = 'flex';
+cancelSettings.onclick = () => settingsModal.style.display = 'none';
+saveNames.onclick = () => { P.forEach(p => { const v = document.getElementById('name'+p).value.trim(); if(v) displayName[p] = v; }); saveConfig(); updateDealerUI(); updateStatsTable(); settingsModal.style.display = 'none'; };
+clearLatest.onclick = () => { if(!history.length){ alert('沒有上一局可還原'); return;} const prev = history.pop(); P.forEach(p => Object.assign(stats[p], prev.stats[p])); roundIndex = prev.roundIndex; dealer = prev.dealer; consec = prev.consec; latestEl.textContent = prev.latest; updateHeader(); updateDealerUI(); updateStatsTable(); saveStats(); settingsModal.style.display = 'none'; };
+clearAll.onclick = () => { history=[]; P.forEach(p=> stats[p]={score:0,zimo:0,chi:0,gun:0}); roundIndex=0; dealer='東'; consec=0; latestEl.textContent=''; updateHeader(); updateDealerUI(); updateStatsTable(); saveStats(); settingsModal.style.display = 'none'; };
+const nextSeat = p => P[(P.indexOf(p)+1)%4];
+let winner='', gunner='', mode='';
+playersDiv.onclick = e => { const p=e.target.dataset.p; if(!p) return; winner=p; titleEl.textContent = `${displayName[p]} 胡牌方式`; document.getElementById('A').style.display='block'; document.getElementById('B').style.display='none'; document.getElementById('C').style.display='none'; modal.style.display='flex'; };
+document.getElementById('A').onclick = e => { const act=e.target.dataset.act; if(!act) return; mode=act; if(mode==='chi'){ gunsDiv.innerHTML=''; P.filter(p=>p!==winner).forEach(p=>{ const btn=document.createElement('button'); btn.className='mbtn'; btn.textContent=displayName[p]; btn.onclick=()=>{ gunner=p; document.getElementById('tipC').textContent = `放槍 ${displayName[p]} 台`; document.getElementById('A').style.display='none'; document.getElementById('B').style.display='none'; document.getElementById('C').style.display='block'; taiInput.value=0; }; gunsDiv.appendChild(btn); }); document.getElementById('A').style.display='none'; document.getElementById('B').style.display='block'; } else { gunner=''; document.getElementById('tipC').textContent = `${displayName[winner]} 自摸 台`; document.getElementById('A').style.display='none'; document.getElementById('B').style.display='none'; document.getElementById('C').style.display='block'; taiInput.value=0; } };
+closeM.onclick = () => modal.style.display='none';
+backA.onclick = () => { document.getElementById('A').style.display='block'; document.getElementById('B').style.display='none'; };
+backPrev.onclick = () => { document.getElementById('A').style.display='block'; document.getElementById('C').style.display='none'; };
+document.getElementById('minusTai').onclick = () => { let v=parseInt(taiInput.value)||0; if(v>0) taiInput.value=v-1; };
+document.getElementById('plusTai').onclick = () => { let v=parseInt(taiInput.value)||0; taiInput.value=v+1; };
+okBtn.onclick = () => {
+  const snap={ stats:{}, latest:latestEl.textContent, roundIndex, dealer, consec };
+  P.forEach(p => snap.stats[p] = {...stats[p]}); history.push(snap);
+  const t0 = parseInt(taiInput.value)||0; const t = (mode==='zi'? t0+1 : t0);
+  const delta = {東:0,南:0,西:0,北:0};
+  const raw = t * MUL; const bonus = (consec*2+1)*MUL; const baseU = BASE + raw;
+  if(mode==='chi'){
+    const loseB = (gunner===dealer||winner===dealer)? -1:0;
+    delta[gunner] = -baseU + loseB*bonus;
+  } else {
+    P.filter(p=>p!==winner).forEach(p=>{ const loseB=(p===dealer||winner===dealer)?-1:0; delta[p] = -baseU + loseB*bonus; });
+  }
+  delta[winner] = -P.reduce((s,p)=> s+delta[p], 0);
+  P.forEach(p=> stats[p].score += delta[p]);
+  if(mode==='zi') stats[winner].zimo++;
+  if(mode==='chi'){ stats[winner].chi++; stats[gunner].gun++; }
+  
+  // 顯示結果
+  let result;
+  if(mode==='chi'){
+    const main = `${displayName[winner]} 吃胡 ${displayName[gunner]} ${t} 台`;
+    if(winner===dealer||gunner===dealer){
+      result = `${main}/莊家(${consec}) ${consec*2+1} 台/${delta[winner]} 分`;
+    } else {
+      result = `${main} ${delta[winner]} 分`;
     }
-    function saveStats() { localStorage.setItem("mjStats", JSON.stringify(stats)); }
-    loadStats();
-
-    let dealer = "東", consec = 0;
-    const roundNames = P.flatMap(pr => P.map(sc => pr + sc));
-    let roundIndex = 0;
-    let history = [];
-
-    const roundEl = document.getElementById("roundDisplay");
-    const playersDiv = document.getElementById("players");
-    const latestEl = document.getElementById("latestResult");
-    const modal = document.getElementById("modal");
-    const settingsBtn = document.getElementById("settingsBtn");
-    const settingsModal = document.getElementById("settingsModal");
-    const titleEl = document.getElementById("title");
-    const gunsDiv = document.getElementById("guns");
-    const taiInput = document.getElementById("tai");
-    const closeM = document.getElementById("closeM");
-    const backA = document.getElementById("backA");
-    const backPrev = document.getElementById("backPrev");
-    const okBtn = document.getElementById("ok");
-    const saveNames = document.getElementById("saveNames");
-    const clearLatest = document.getElementById("clearLatest");
-    const clearAll = document.getElementById("clearAll");
-    const cancelSettings = document.getElementById("cancelSettings");
-
-    function updateRound() { roundEl.textContent = `局數：${roundNames[roundIndex]}`; }
-    function updateDealerUI() {
-      document.querySelectorAll("#players .btn").forEach(b => {
-        b.textContent = displayName[b.dataset.p];
-        b.classList.toggle("dealer", b.dataset.p === dealer);
-      });
-    }
-    function updateStatsTable() {
-      const tbody = document.querySelector("#statsTable tbody"); tbody.innerHTML = "";
-      P.forEach(p => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${displayName[p]}</td><td>${stats[p].score}</td><td>${stats[p].zimo}</td><td>${stats[p].chi}</td><td>${stats[p].gun}</td>`;
-        tbody.appendChild(tr);
-      });
-    }
-
-    settingsBtn.onclick = () => settingsModal.style.display = "flex";
-    cancelSettings.onclick = () => settingsModal.style.display = "none";
-    saveNames.onclick = () => {
-      P.forEach(p => { const val = document.getElementById(`name${p}`).value.trim(); if(val) displayName[p] = val; });
-      updateDealerUI(); updateStatsTable(); settingsModal.style.display = "none";
-    };
-    clearLatest.onclick = () => {
-      if(history.length === 0) { alert("沒有上一局可還原"); return; }
-      const prev = history.pop();
-      P.forEach(p => Object.assign(stats[p], prev.stats[p]));
-      roundIndex = prev.roundIndex; dealer = prev.dealer; consec = prev.consec; latestEl.textContent = prev.latest;
-      updateRound(); updateDealerUI(); updateStatsTable(); saveStats(); settingsModal.style.display = "none";
-    };
-    clearAll.onclick = () => {
-      history = [];
-      P.forEach(p => stats[p] = { score:0, zimo:0, chi:0, gun:0 });
-      roundIndex = 0; dealer = "東"; consec = 0; latestEl.textContent = "";
-      updateRound(); updateDealerUI(); updateStatsTable(); saveStats(); settingsModal.style.display = "none";
-    };
-
-    const nextSeat = p => P[(P.indexOf(p) + 1) % 4];
-    let winner = "", gunner = "", mode = "";
-
-    playersDiv.onclick = e => {
-      const p = e.target.dataset.p; if(!p) return;
-      winner = p; titleEl.textContent = `${displayName[p]} 胡牌方式`;
-      document.getElementById("A").style.display = "block";
-      document.getElementById("B").style.display = "none";
-      document.getElementById("C").style.display = "none";
-      modal.style.display = "flex";
-    };
-
-    document.getElementById("A").onclick = e => {
-      const act = e.target.dataset.act; if(!act) return; mode = act;
-      if(mode === "chi") {
-        gunsDiv.innerHTML = "";
-        P.filter(p => p !== winner).forEach(p => {
-          const btn = document.createElement("button"); btn.className = "mbtn"; btn.textContent = displayName[p];
-          btn.onclick = () => { gunner = p; document.getElementById("tipC").textContent = `放槍 ${displayName[p]} 台數`;
-            document.getElementById("A").style.display = "none";
-            document.getElementById("B").style.display = "none";
-            document.getElementById("C").style.display = "block";
-            taiInput.value = 0;
-          };
-          gunsDiv.appendChild(btn);
-        });
-        document.getElementById("A").style.display = "none";
-        document.getElementById("B").style.display = "block";
-      } else {
-        gunner = "";
-        document.getElementById("tipC").textContent = `${displayName[winner]} 自摸 台數`;
-        document.getElementById("A").style.display = "none";
-        document.getElementById("B").style.display = "none";
-        document.getElementById("C").style.display = "block";
-        taiInput.value = 0;
-      }
-    };
-
-    closeM.onclick = () => modal.style.display = "none";
-    backA.onclick = () => { document.getElementById("A").style.display = "block"; document.getElementById("B").style.display = "none"; };
-    backPrev.onclick = () => { document.getElementById("A").style.display = "block"; document.getElementById("C").style.display = "none"; };
-
-    document.getElementById("minusTai").onclick = () => { let v = parseInt(taiInput.value,10)||0; if(v>0) taiInput.value = v-1; };
-    document.getElementById("plusTai").onclick = () => { let v = parseInt(taiInput.value,10)||0; taiInput.value = v+1; };
-
-    okBtn.onclick = () => {
-      const snapshot = { stats: {}, latest: latestEl.textContent, roundIndex, dealer, consec };
-      P.forEach(p => snapshot.stats[p] = { ...stats[p] }); history.push(snapshot);
-      const t = parseInt(taiInput.value,10); if(isNaN(t)||t<0){ alert("台數?"); return; }
-      const prevDealer = dealer, prevRound = roundIndex;
-      const raw = t*MUL, bonus = (consec*2+1)*MUL, baseU = BASE+raw;
-      const delta = { 東:0, 南:0, 西:0, 北:0 };
-      if(mode==="chi"){ const loseB = (gunner===dealer||winner===dealer)?-1:0; delta[gunner] = -baseU+loseB*bonus;
-      } else { P.filter(p=>p!==winner).forEach(p=>{ const loseB=(p===dealer||winner===dealer)?-1:0; delta[p] = -baseU+loseB*bonus; }); }
-      delta[winner] = -P.reduce((s,p)=>s+delta[p],0);
-      P.forEach(p=> stats[p].score += delta[p]); if(mode==="zi") stats[winner].zimo++; if(mode==="chi"){ stats[winner].chi++; stats[gunner].gun++; }
-      latestEl.textContent = mode==="chi" ? `${displayName[winner]}吃胡${displayName[gunner]} ${t}台 ${delta[winner]}分` : `${displayName[winner]}自摸 ${t}台 ${delta[winner]}分`;
-      if(winner===dealer){ consec++; } else { dealer = nextSeat(dealer); consec = 0; roundIndex = (roundIndex+1)%roundNames.length; }
-      updateRound(); updateDealerUI(); updateStatsTable(); saveStats();
-      if(prevRound===roundNames.length-1 && prevDealer!==dealer) alert('完成一將');
-      modal.style.display = "none";
-    };
-
-    updateRound(); updateDealerUI(); updateStatsTable();
-  </script></body>
+  } else {
+    // 自摸顯示：自摸1台 + 手動輸入台 + 莊家台
+    const dealerTai = consec*2+1;
+    result = `${displayName[winner]} 自摸 1 台 + ${t0} 台 + 莊家(${consec}) ${dealerTai} 台 / ${delta[winner]} 分`;
+  }
+  latestEl.textContent = result;
+  
+  // 換莊
+  if(winner===dealer){
+    consec++;
+  } else {
+    dealer = nextSeat(dealer);
+    consec = 0;
+    roundIndex = (roundIndex+1) % roundNames.length;
+  }
+  updateHeader(); updateDealerUI(); updateStatsTable(); saveStats(); modal.style.display='none';
+};
+updateHeader(); updateDealerUI(); updateStatsTable();
+</script>
+</body>
 </html>
