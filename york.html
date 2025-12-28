@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>戰術版 TPS - 射擊修正版</title>
+    <style>
+        body {
+            background-color: #000;
+            margin: 0; height: 100vh; overflow: hidden;
+            font-family: "Microsoft JhengHei", monospace;
+            user-select: none; touch-action: none;
+        }
+
+        /* 震動動畫 */
+        @keyframes shake {
+            0% { transform: translate(0, 0); }
+            20% { transform: translate(-10px, 10px); }
+            40% { transform: translate(10px, -10px); }
+            60% { transform: translate(-10px, -10px); }
+            80% { transform: translate(10px, 10px); }
+            100% { transform: translate(0, 0); }
+        }
+        .shaking { animation: shake 0.3s ease-in-out; }
+
+        #viewport {
+            width: 100vw; height: 100vh; perspective: 600px;
+            position: relative;
+            background: linear-gradient(#87CEEB 0%, #E0F7FA 50%, #5d4037 50%);
+            overflow: hidden; transition: background 0.5s;
+        }
+        #viewport.castle-mode { background: linear-gradient(#1a1a1a 0%, #000000 50%, #1a1a1a 50%); }
+
+        #world {
+            position: absolute; left: 50%; top: 50%; width: 0; height: 0;
+            transform-style: preserve-3d;
+        }
+
+        .floor {
+            position: absolute; width: 4000px; height: 4000px;
+            background-color: #5d4037;
+            background-image: 
+                radial-gradient(circle, rgba(0,0,0,0.1) 20%, transparent 20%),
+                linear-gradient(#6d4c41 2px, transparent 2px), 
+                linear-gradient(90deg, #6d4c41 2px, transparent 2px);
+            background-size: 100px 100px, 200px 200px, 200px 200px;
+            transform: translate(-50%, -50%) rotateX(90deg); transition: background 0.5s;
+            image-rendering: pixelated;
+            border: 20px solid rgba(0,0,0,0.5);
+        }
+        .floor.castle-floor {
+            background-color: #2c3e50;
+            background-image: 
+                linear-gradient(#34495e 4px, transparent 4px), 
+                linear-gradient(90deg, #34495e 4px, transparent 4px);
+            background-size: 200px 200px;
+        }
+
+        #crosshair {
+            position: absolute; top: 50%; left: 50%;
+            width: 24px; height: 24px; transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 500;
+        }
+        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: rgba(255, 255, 255, 0.9); box-shadow: 0 0 2px black; }
+        #crosshair::before { top: 11px; left: 0; width: 24px; height: 2px; }
+        #crosshair::after { top: 0; left: 11px; width: 2px; height: 24px; }
+
+        /* 手持裝備 */
+        #hand-container {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 400; perspective: 600px;
+        }
+        #weapon-right {
+            position: absolute; bottom: -120px; right: 18%; width: 25px; height: 200px;
+            background: #333; border: 2px solid #555;
+            transform-origin: bottom center;
+            transform: rotateX(40deg) rotateY(-5deg) rotateZ(5deg);
+            transition: transform 0.1s;
+        }
+        #weapon-right::before { content: ''; position: absolute; top: -10px; left: 0; width: 100%; height: 10px; background: #000; border: 1px solid #555; }
+        #weapon-right::after { content: ''; position: absolute; top: 50px; left: -5px; width: 35px; height: 60px; background: #444; border-radius: 5px; }
+        
+        #weapon-left {
+            position: absolute; bottom: -80px; left: 15%; width: 120px; height: 160px;
+            background: #95a5a6; border: 6px solid #34495e;
+            transform-origin: bottom center;
+            transform: rotateX(10deg) rotateY(20deg) rotateZ(-10deg);
+            display: none; box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+        #weapon-left::before { content: ''; position: absolute; top: 20%; left: 20%; width: 60%; height: 60%; background: #7f8c8d; border: 2px dashed #2c3e50; }
+
+        .anim-recoil { animation: recoil 0.1s ease-out; }
+        @keyframes recoil {
+            0% { transform: rotateX(40deg) rotateY(-5deg) rotateZ(5deg); }
+            50% { transform: rotateX(60deg) rotateY(-5deg) rotateZ(5deg) translateZ(20px); }
+            100% { transform: rotateX(40deg) rotateY(-5deg) rotateZ(5deg); }
+        }
+
+        /* 子彈 */
+        .bullet { position: absolute; width: 20px; height: 20px; border-radius: 50%; transform-style: preserve-3d; }
+        .bullet.player-bullet { background: radial-gradient(white, yellow, orange); box-shadow: 0 0 15px orange; }
+        .bullet.enemy-bullet { background: radial-gradient(white, #ff3333, #990000); box-shadow: 0 0 15px red; }
+        .bullet::after { content: ''; position: absolute; top: 0; left: 50%; width: 100%; height: 100%; background: inherit; transform: rotateY(90deg) translateX(-50%); border-radius: 50%; }
+
+        .dmg-text { position: absolute; width: 100px; text-align: center; color: #fff; font-weight: bold; font-size: 24px; text-shadow: 1px 1px 0 #000; animation: floatUp 0.8s forwards; pointer-events: none; }
+        @keyframes floatUp { 0% { transform: translate3d(-50%, 0, 0); opacity: 1; } 100% { transform: translate3d(-50%, -100px, 0); opacity: 0; } }
+
+        .object { position: absolute; left: 0; top: 0; transform-style: preserve-3d; transform-origin: 50% 100%; }
+
+        /* 方形盒子 */
+        .box-face { position: absolute; backface-visibility: hidden; box-sizing: border-box; transition: background 0.1s; }
+        
+        .enemy .box-face { background: #e74c3c; border: 2px solid #c0392b; }
+        .enemy.hit .box-face { background: #ff0000 !important; box-shadow: 0 0 20px red; }
+        .enemy.dead { animation: enemyDie 0.5s forwards; }
+        @keyframes enemyDie {
+            0% { transform: translate3d(0,0,0) scale(1); opacity: 1; }
+            50% { transform: translate3d(0, -50px, 0) rotateY(180deg) scale(1.2); opacity: 0.8; }
+            100% { transform: translate3d(0, 100px, 0) rotateY(360deg) scale(0); opacity: 0; }
+        }
+        .enemy .face-front { background-size: 100% 100%; }
+
+        .boss .box-face { background: #2c3e50; border: 4px solid #000; }
+        .boss.hit .box-face { background: #ff0000 !important; box-shadow: 0 0 30px red; }
+        .boss .face-front { background: radial-gradient(circle at 50% 40%, red 20px, yellow 30px, transparent 35%), #34495e; box-shadow: inset 0 0 20px #000; }
+        .boss .face-top { background: #000; }
+
+        .shadow { position: absolute; bottom: 0; left: 50%; width: 100%; height: 100%; background: radial-gradient(rgba(0,0,0,0.5), transparent 70%); transform: translate(-50%, -50%) rotateX(90deg) translateZ(-1px); }
+
+        .wall { width: 400px; height: 400px; background: #7f8c8d; border: 4px solid #34495e; }
+        .tree { width: 0; height: 0; border-left: 80px solid transparent; border-right: 80px solid transparent; border-bottom: 300px solid rgba(39, 174, 96, 1); }
+        .tree::after { content: ''; position: absolute; left: -80px; top: 80px; width: 0; height: 0; border-left: 80px solid transparent; border-right: 80px solid transparent; border-bottom: 300px solid rgba(39, 174, 96, 1); transform: rotateY(90deg); transform-origin: 50% 100%; }
+        .tree-trunk .box-face { background: #795548; border: 1px solid #5d4037; }
+        .tree-leaves .box-face { background: #27ae60; border: 1px solid #2ecc71; }
+        .treasure { width: 60px; height: 60px; background: #f1c40f; border: 2px solid #f39c12; box-shadow: 0 0 15px #f1c40f; }
+        .treasure::before { content: '💰'; font-size: 30px; position: absolute; left: 10px; top: 10px; }
+
+        .hp-bar-container { position: absolute; top: -40px; left: 50%; width: 80px; height: 14px; background: #333; transform: translateX(-50%); border: 1px solid white; pointer-events: none; display: flex; justify-content: center; align-items: center; }
+        .boss .hp-bar-container { top: -400px; width: 200px; height: 24px; border: 2px solid gold; }
+        .hp-bar-fill { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: #2ecc71; transition: width 0.1s; z-index: 0; }
+        .hp-text { position: relative; z-index: 1; color: white; font-size: 10px; font-weight: bold; text-shadow: 1px 1px 0 #000; }
+        .boss .hp-text { font-size: 14px; }
+        
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
+        #touch-zone-look { position: absolute; top: 0; right: 0; width: 60%; height: 100%; pointer-events: auto; z-index: 101; }
+        .game-btn { position: absolute; background: rgba(255, 255, 255, 0.2); border: 2px solid rgba(255, 255, 255, 0.4); color: white; display: flex; justify-content: center; align-items: center; pointer-events: auto; backdrop-filter: blur(4px); touch-action: manipulation; flex-direction: column; line-height: 1.2; font-weight: bold; z-index: 102; }
+        .game-btn:active { background: rgba(255, 255, 255, 0.5); transform: scale(0.95); }
+
+        #joystick-zone { position: absolute; bottom: 50px; left: 50px; width: 150px; height: 150px; pointer-events: auto; z-index: 105; }
+        #joystick-base { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 120px; height: 120px; background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 50%; }
+        #joystick-stick { position: absolute; top: 50%; left: 50%; width: 50px; height: 50px; background: rgba(255, 255, 255, 0.8); border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 10px rgba(0,0,0,0.5); pointer-events: none; }
+
+        #btn-jump { bottom: 190px; right: 40px; width: 70px; height: 70px; border-radius: 50%; font-size: 16px; z-index: 102; }
+        #btn-attack { bottom: 90px; right: 80px; width: 90px; height: 90px; border-radius: 50%; background: rgba(255, 50, 50, 0.4); font-size: 30px; z-index: 102; }
+        
+        .top-btn { top: 20px; width: 90px; height: 40px; border-radius: 20px; font-size: 14px; z-index: 500; border: 2px solid white; cursor: pointer; }
+        #btn-shop { left: 40%; transform: translateX(-50%); background: rgba(241, 196, 15, 0.8); color: #000; }
+        #btn-bag { left: 60%; transform: translateX(-50%); background: rgba(46, 204, 113, 0.8); color: #fff; }
+        #btn-castle { left: 20px; width: 100px; background: rgba(142, 68, 173, 0.8); color: #fff; }
+
+        #ui-status { position: absolute; top: 80px; left: 20px; color: white; font-size: 14px; text-shadow: 1px 1px 2px black; line-height: 1.5; z-index: 102;}
+        #damage-flash { position: absolute; width: 100%; height: 100%; background: red; opacity: 0; pointer-events: none; transition: opacity 0.1s; }
+        #teleport-flash { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; opacity: 0; pointer-events: none; transition: opacity 0.5s; z-index: 2000; }
+
+        .modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.95); border-radius: 15px; display: none; flex-direction: column; align-items: center; padding: 20px; color: white; pointer-events: auto; z-index: 999; width: 320px; height: 400px; }
+        .modal h2 { margin: 0 0 15px 0; border-bottom: 2px solid #555; width: 100%; text-align: center; padding-bottom: 10px; }
+        .modal-content { width: 100%; flex: 1; overflow-y: auto; }
+        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #333; }
+        .btn-action { padding: 5px 10px; border-radius: 5px; border: none; cursor: pointer; font-weight: bold; }
+        .btn-buy { background: gold; color: black; }
+        .btn-equip { background: #3498db; color: white; }
+        .btn-equip.equipped { background: #27ae60; cursor: default; }
+        .close-btn { margin-top: 10px; background: #c0392b; color: white; border: none; padding: 10px 30px; border-radius: 5px; cursor: pointer; }
+
+        #shop-modal { border: 4px solid gold; }
+        #bag-modal { border: 4px solid #2ecc71; }
+    </style>
+</head>
+<body>
+
+    <div id="viewport">
+        <div id="crosshair"></div>
+        <div id="hand-container">
+            <div id="weapon-left"></div> 
+            <div id="weapon-right"></div>
+        </div>
+        <div id="world">
+            <div id="floor" class="floor"></div>
+        </div>
+        <div id="damage-flash"></div>
+        <div id="teleport-flash"></div>
+
+        <div id="ui-layer">
+            <div id="ui-status">初始化...</div>
+            <div id="btn-shop" class="game-btn top-btn">🛒 商店</div>
+            <div id="btn-bag" class="game-btn top-btn">🎒 背包</div>
+            <div id="btn-castle" class="game-btn top-btn">🏰 魔王城</div>
+            <div id="touch-zone-look"></div>
+            <div id="joystick-zone">
+                <div id="joystick-base"></div>
+                <div id="joystick-stick"></div>
+            </div>
+            <div id="btn-jump" class="game-btn">跳</div>
+            <div id="btn-attack" class="game-btn">🔫</div>
+        </div>
+
+        <div id="shop-modal" class="modal">
+            <h2 style="color: gold;">補給站</h2>
+            <div class="modal-content">
+                <div class="item-row"><span>醫療包 (補滿血)</span><button class="btn-action btn-buy" onclick="buyConsumable('heal', 50)">50G</button></div>
+                <div class="item-row"><span>雷射槍 (攻+50)</span><button class="btn-action btn-buy" onclick="buyItem('sword', 200, '雷射槍')">200G</button></div>
+                <div class="item-row"><span>離子砲 (攻+80)</span><button class="btn-action btn-buy" onclick="buyItem('axe', 400, '離子砲')">400G</button></div>
+                <div class="item-row"><span>能量盾 (傷-50%)</span><button class="btn-action btn-buy" onclick="buyItem('shield', 300, '能量盾')">300G</button></div>
+                <div class="item-row"><span>動力靴 (速+10)</span><button class="btn-action btn-buy" onclick="buyItem('boots', 300, '動力靴')">300G</button></div>
+            </div>
+            <button class="close-btn" onclick="toggleModal('shop', false)">離開</button>
+        </div>
+
+        <div id="bag-modal" class="modal">
+            <h2 style="color: #2ecc71;">裝備欄</h2>
+            <div class="modal-content" id="bag-list">
+                <div style="text-align:center; color:#888; margin-top:20px;">空空如也</div>
+            </div>
+            <button class="close-btn" onclick="toggleModal('bag', false)">關閉</button>
+        </div>
+    </div>
+
+<script>
+    const viewport = document.getElementById('viewport');
+    const world = document.getElementById('world');
+    const floor = document.getElementById('floor');
+    const weaponRight = document.getElementById('weapon-right');
+    const weaponLeft = document.getElementById('weapon-left');
+    const uiStatus = document.getElementById('ui-status');
+    const bagList = document.getElementById('bag-list');
+    const handContainer = document.getElementById('hand-container');
+    const joystickZone = document.getElementById('joystick-zone');
+    const joystickStick = document.getElementById('joystick-stick');
+    
+    const player = { 
+        x: 0, y: 0, z: 0, angle: 0, 
+        hp: 10000, maxHp: 10000, 
+        gold: 0, damage: 100, defense: 0,
+        inventory: [], 
+        equipped: { sword: false, axe: false, shield: false, boots: false } 
+    };
+
+    let BASE_SPEED = 12; 
+    let BASE_JUMP = 15; let BASE_DAMAGE = 100;
+    let currentSpeed = BASE_SPEED; let currentJump = BASE_JUMP;
+
+    const BOSS_MAX_HP = 100;
+    const ENEMY_MAX_HP = 200;
+
+    let cameraPitch = 0; 
+    let logicY = 0; let verticalSpeed = 0; const GRAVITY = -0.8; 
+    let walkBob = 0; 
+
+    let gameObjects = []; let bullets = [];
+    let lastAttackTime = 0;
+    let joyInput = { x: 0, y: 0, active: false };
+    const JOYSTICK_RADIUS = 60; 
+
+    let lookInput = { active: false, lastX: 0, lastY: 0 };
+    let activeModal = null;
+    let isInCastle = false;
+
+    const WORLD_LIMIT = 1900; 
+    const ENEMY_COLORS = ['#e74c3c', '#8e44ad', '#27ae60', '#d35400', '#2980b9'];
+
+    function init() {
+        setupWorld();
+        bindInputs();
+        requestAnimationFrame(gameLoop);
+    }
+
+    function setupWorld() {
+        gameObjects.forEach(o => o.el.remove());
+        gameObjects = [];
+        bullets.forEach(b => b.el.remove());
+        bullets = [];
+        
+        if (isInCastle) {
+            viewport.classList.add('castle-mode');
+            floor.classList.add('castle-floor');
+            player.x = 0; player.z = 600; player.angle = Math.PI; cameraPitch = 0;
+            for(let i=-1200; i<=1200; i+=400) {
+                createObject('wall', i, -1200); createObject('wall', i, 1200);
+                createObject('wall', -1200, i); createObject('wall', 1200, i);
+            }
+            createObject('boss', 0, -400, BOSS_MAX_HP);
+        } else {
+            viewport.classList.remove('castle-mode');
+            floor.classList.remove('castle-floor');
+            for(let i=0; i<40; i++) spawnRandomObject('tree');
+            // 修改：只生成 2 隻敵人
+            for(let i=0; i<2; i++) spawnRandomObject('enemy');
+            for(let i=0; i<5; i++) spawnRandomObject('treasure');
+        }
+    }
+
+    function bindInputs() {
+        const lookZone = document.getElementById('touch-zone-look');
+        lookZone.addEventListener('touchstart', (e) => { 
+            if(activeModal) return; lookInput.active = true; lookInput.lastX = e.changedTouches[0].clientX;
+        }, {passive: false});
+
+        lookZone.addEventListener('touchmove', (e) => { 
+            if(!lookInput.active || activeModal) return; e.preventDefault(); 
+            let cx = e.changedTouches[0].clientX;
+            player.angle += (cx - lookInput.lastX) * 0.005; lookInput.lastX = cx;
+        }, {passive: false});
+
+        lookZone.addEventListener('touchend', () => lookInput.active = false);
+
+        joystickZone.addEventListener('touchstart', (e) => {
+            if(activeModal) return; e.preventDefault(); joyInput.active = true; updateJoystick(e.changedTouches[0]);
+        }, {passive: false});
+
+        joystickZone.addEventListener('touchmove', (e) => {
+            if(!joyInput.active) return; e.preventDefault(); updateJoystick(e.changedTouches[0]);
+        }, {passive: false});
+
+        const endJoystick = (e) => {
+            joyInput.active = false; joyInput.x = 0; joyInput.y = 0; joystickStick.style.transform = `translate(-50%, -50%)`; 
+        };
+        joystickZone.addEventListener('touchend', endJoystick); joystickZone.addEventListener('touchcancel', endJoystick);
+
+        function updateJoystick(touch) {
+            const rect = joystickZone.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2; const centerY = rect.top + rect.height / 2;
+            let dx = touch.clientX - centerX; let dy = touch.clientY - centerY;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist > JOYSTICK_RADIUS) { dx = (dx / dist) * JOYSTICK_RADIUS; dy = (dy / dist) * JOYSTICK_RADIUS; }
+            joystickStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+            joyInput.x = dx / JOYSTICK_RADIUS; joyInput.y = dy / JOYSTICK_RADIUS;
+        }
+
+        document.getElementById('btn-shop').onclick = () => toggleModal('shop', true);
+        document.getElementById('btn-bag').onclick = () => { toggleModal('bag', true); renderBag(); };
+        document.getElementById('btn-castle').onclick = () => { if(!isInCastle) teleportToCastle(); else alert("已在城內"); };
+        
+        const act = (id, fn) => {
+            const b = document.getElementById(id);
+            const doIt = (e) => { e.preventDefault(); e.stopPropagation(); fn(); };
+            b.addEventListener('touchstart', doIt); b.addEventListener('mousedown', doIt);
+        };
+        act('btn-jump', jump); act('btn-attack', shoot);
+    }
+
+    function jump() { if (logicY === 0) verticalSpeed = currentJump; }
+    function toggleModal(name, show) {
+        const el = document.getElementById(name + '-modal'); el.style.display = show ? 'flex' : 'none';
+        activeModal = show ? name : null; joyInput.active = false; joyInput.x=0; joyInput.y=0; lookInput.active = false;
+    }
+    function buyConsumable(type, cost) { if(player.gold >= cost) { player.gold -= cost; if(type === 'heal') player.hp = player.maxHp; updateUI(); } else alert("金幣不足！"); }
+    function buyItem(id, cost, name) { if(player.inventory.includes(id)) { alert("已有此物"); return; } if(player.gold >= cost) { player.gold -= cost; player.inventory.push(id); alert(`獲得 [${name}]`); updateUI(); } else alert("金幣不足！"); }
+
+    function renderBag() {
+        bagList.innerHTML = '';
+        const items = [ { id: 'sword', name: '雷射槍 (攻+50)' }, { id: 'axe', name: '離子砲 (攻+80)' }, { id: 'shield', name: '能量盾 (傷-50%)' }, { id: 'boots', name: '動力靴 (速+10)' } ];
+        player.inventory.forEach(itemId => {
+            const itemInfo = items.find(i => i.id === itemId); if(!itemInfo) return;
+            const div = document.createElement('div'); div.className = 'item-row';
+            div.innerHTML = `<span>${itemInfo.name}</span><button class="btn-action btn-equip ${player.equipped[itemId]?'equipped':''}" onclick="equipItem('${itemId}')">${player.equipped[itemId]?'已裝備':'裝備'}</button>`;
+            bagList.appendChild(div);
+        });
+    }
+
+    function equipItem(id) {
+        if(id === 'sword') player.equipped.axe = false; if(id === 'axe') player.equipped.sword = false;
+        player.equipped[id] = !player.equipped[id];
+        calculateStats(); updateVisuals(); renderBag(); updateUI();
+    }
+
+    function calculateStats() {
+        player.damage = BASE_DAMAGE; currentSpeed = BASE_SPEED; player.defense = 0;
+        if(player.equipped.sword) player.damage += 50; if(player.equipped.axe) player.damage += 80;
+        if(player.equipped.boots) currentSpeed += 10; if(player.equipped.shield) player.defense = 0.5;
+    }
+
+    function updateVisuals() {
+        weaponRight.className = ''; 
+        if(player.equipped.sword) weaponRight.classList.add('sword-diamond'); else if(player.equipped.axe) weaponRight.classList.add('axe-gold');
+        weaponLeft.style.display = player.equipped.shield ? 'block' : 'none';
+    }
+
+    function teleportToCastle() {
+        document.getElementById('teleport-flash').style.opacity = 1;
+        setTimeout(() => { isInCastle = true; setupWorld(); document.getElementById('teleport-flash').style.opacity = 0; }, 500);
+    }
+
+    function shakeScreen() {
+        const vp = document.getElementById('viewport');
+        vp.classList.remove('shaking'); void vp.offsetWidth; vp.classList.add('shaking');
+    }
+
+    function shoot() {
+        if(Date.now()-lastAttackTime < 200) return;
+        lastAttackTime = Date.now();
+        weaponRight.classList.remove('anim-recoil'); void weaponRight.offsetWidth; weaponRight.classList.add('anim-recoil');
+        
+        // --- 修正：建立子彈時，加上 120 的高度，讓它從槍口發射 ---
+        createBullet('player', player.x, player.y - 120, player.z, player.angle);
+    }
+
+    function createBullet(owner, x, y, z, angle) {
+        const el = document.createElement('div');
+        el.className = `bullet ${owner === 'player' ? 'player-bullet' : 'enemy-bullet'}`;
+        world.appendChild(el);
+        
+        let speed = owner === 'player' ? 60 : 30;
+        
+        // --- 修正：子彈方向公式反轉 ---
+        let vx = Math.sin(angle) * speed; // 原本是 -Math.sin
+        let vz = -Math.cos(angle) * speed; // 原本是 Math.cos
+
+        bullets.push({ el: el, x: x, y: y, z: z, vx: vx, vz: vz, owner: owner, life: 100 });
+    }
+
+    function updateBullets() {
+        for (let i = bullets.length - 1; i >= 0; i--) {
+            let b = bullets[i];
+            b.x += b.vx; b.z += b.vz; b.life--;
+            b.el.style.transform = `translate3d(${b.x}px, ${b.y}px, ${b.z}px) rotateY(${player.angle}deg)`;
+
+            if (b.life <= 0) { b.el.remove(); bullets.splice(i, 1); continue; }
+
+            if (b.owner === 'player') {
+                for (let j = 0; j < gameObjects.length; j++) {
+                    let obj = gameObjects[j];
+                    if (!obj.active || obj.isDead || (obj.type !== 'enemy' && obj.type !== 'boss')) continue;
+                    
+                    let dx = b.x - obj.x; let dz = b.z - obj.z;
+                    // --- 修正：使用 XZ 平面距離 (忽略高度) 且加大判定範圍 ---
+                    let dist = Math.sqrt(dx*dx + dz*dz);
+                    
+                    if (dist < 80) { // 80 判定範圍
+                        hitObject(obj);
+                        b.el.remove(); bullets.splice(i, 1);
+                        break; 
+                    }
+                }
+            } else if (b.owner === 'enemy') {
+                let dx = b.x - player.x; let dz = b.z - player.z;
+                let dist = Math.sqrt(dx*dx + dz*dz);
+                
+                if (dist < 60) { // 玩家判定範圍
+                    hitPlayer();
+                    b.el.remove(); bullets.splice(i, 1);
+                    continue;
+                }
+            }
+        }
+    }
+
+    function hitObject(obj) {
+        if(obj.type === 'boss') {
+            obj.hp -= 1; showDamage(obj.el, "-1");
+        } else {
+            obj.hp -= player.damage; showDamage(obj.el, "-" + player.damage);
+        }
+        
+        obj.el.classList.add('hit'); setTimeout(() => obj.el.classList.remove('hit'), 100);
+        let percent = (Math.max(0, obj.hp) / obj.maxHp) * 100;
+        obj.hpFill.style.width = percent + '%';
+        obj.hpText.innerText = Math.max(0, obj.hp) + '/' + obj.maxHp;
+        if(percent < 30) obj.hpFill.style.background = 'red';
+
+        if(obj.hp <= 0) {
+            obj.isDead = true; obj.el.classList.add('dead');
+            setTimeout(() => {
+                obj.el.remove(); obj.active = false;
+                if(obj.type==='boss') {
+                    alert("任務完成！獲得賞金 100兆！"); player.gold += 99999999999999;
+                    setTimeout(()=>{ isInCastle=false; setupWorld(); }, 1000);
+                } else {
+                    player.gold += 100; spawnRandomObject('enemy');
+                }
+            }, 500);
+        }
+    }
+
+    function hitPlayer() {
+        let dmg = 20; 
+        if(player.defense > 0) dmg = Math.floor(dmg * 0.5); 
+        player.hp -= dmg;
+        shakeScreen(); 
+        document.getElementById('damage-flash').style.opacity = 0.5; 
+        setTimeout(()=>document.getElementById('damage-flash').style.opacity=0, 100);
+        updateUI();
+    }
+
+    function gameLoop() {
+        if (player.hp <= 0) return; if (activeModal) { requestAnimationFrame(gameLoop); return; }
+        
+        let move = false;
+        if (Math.abs(joyInput.x) > 0.1 || Math.abs(joyInput.y) > 0.1) {
+            move = true;
+            let fwd = joyInput.y; let side = joyInput.x;
+            let dx = (-Math.sin(player.angle) * fwd + Math.cos(player.angle) * side) * currentSpeed;
+            let dz = (Math.cos(player.angle) * fwd + Math.sin(player.angle) * side) * currentSpeed;
+            
+            let nx = player.x + dx; let nz = player.z + dz;
+            if(isInCastle) { if(nx>1150) nx=1150; if(nx<-1150) nx=-1150; if(nz>1150) nz=1150; if(nz<-1150) nz=-1150; }
+            else { if(nx > WORLD_LIMIT) nx = WORLD_LIMIT; if(nx < -WORLD_LIMIT) nx = -WORLD_LIMIT; if(nz > WORLD_LIMIT) nz = WORLD_LIMIT; if(nz < -WORLD_LIMIT) nz = -WORLD_LIMIT; }
+            player.x = nx; player.z = nz;
+        }
+
+        logicY += verticalSpeed; verticalSpeed += GRAVITY; if (logicY < 0) { logicY = 0; verticalSpeed = 0; } player.y = -logicY;
+
+        let camHeight = 80; 
+        world.style.transform = `rotateX(${cameraPitch}deg) rotateY(${player.angle}rad) translate3d(${-player.x}px, ${-player.y + camHeight}px, ${-player.z}px)`;
+        if(!isInCastle) floor.style.backgroundPosition = `${-player.x}px ${-player.z}px`;
+        floor.style.transform = `translate3d(${player.x}px, 0, ${player.z}px) translate(-50%, -50%) rotateX(90deg)`;
+
+        if(move && logicY === 0) {
+            walkBob += 0.15;
+            handContainer.style.transform = `translate(${Math.cos(walkBob/2)*5}px, ${Math.sin(walkBob)*10}px)`;
+        } else handContainer.style.transform = `translate(0, 0)`;
+
+        updateObjects();
+        updateBullets();
+        updateUI();
+        requestAnimationFrame(gameLoop);
+    }
+
+    function createObject(type, x, z, hp=200) {
+        const div = document.createElement('div'); div.className = `object ${type}`;
+        div.style.transform = `translate3d(${x}px, 0, ${z}px)`;
+        let enemyColor = ENEMY_COLORS[Math.floor(Math.random() * ENEMY_COLORS.length)];
+        let width = 60; let height = 120;
+        if (type === 'boss') { width = 160; height = 360; } else if (type === 'tree') { width = 40; height = 100; }
+        
+        if (type === 'boss' || type === 'enemy') {
+            createFace(div, width, height, `translateZ(${width/2}px)`, 'face-front box-face', type, enemyColor);
+            createFace(div, width, height, `rotateY(180deg) translateZ(${width/2}px)`, 'face-back box-face', type, enemyColor);
+            createFace(div, width, height, `rotateY(90deg) translateZ(${width/2}px)`, 'face-right box-face', type, enemyColor);
+            createFace(div, width, height, `rotateY(-90deg) translateZ(${width/2}px)`, 'face-left box-face', type, enemyColor);
+            createFace(div, width, width, `translateY(${-height/2}px) rotateX(90deg)`, 'face-top box-face', type, enemyColor);
+            const shadow = document.createElement('div'); shadow.className='shadow';
+            shadow.style.width = (width*1.2)+'px'; shadow.style.height = (width*1.2)+'px'; div.appendChild(shadow);
+        } else if (type === 'tree') {
+            const trunk = document.createElement('div'); trunk.className = 'tree-trunk'; trunk.style.position = 'absolute'; createBox(trunk, 40, 100); div.appendChild(trunk);
+            const leaves = document.createElement('div'); leaves.className = 'tree-leaves'; leaves.style.position = 'absolute'; leaves.style.transform = `translateY(-100px)`; createBox(leaves, 120, 120); div.appendChild(leaves);
+        }
+        
+        let obj = { el: div, type: type, x: x, z: z, hp: hp, maxHp: hp, active: true, isDead: false, lastAttackTime: Date.now() + Math.random()*2000 };
+        if(['enemy','boss'].includes(type)) {
+            const bar = document.createElement('div'); bar.className = 'hp-bar-container';
+            const fill = document.createElement('div'); fill.className = 'hp-bar-fill';
+            const text = document.createElement('div'); text.className = 'hp-text';
+            text.innerText = hp + '/' + hp;
+            bar.appendChild(fill); bar.appendChild(text); div.appendChild(bar);
+            obj.hpFill = fill; obj.hpText = text;
+        }
+        world.appendChild(div); gameObjects.push(obj);
+    }
+
+    function createFace(parent, w, h, transform, className, type, color) {
+        const face = document.createElement('div'); face.className = className;
+        face.style.width = w + 'px'; face.style.height = h + 'px';
+        face.style.transform = transform;
+        face.style.left = (-w/2) + 'px'; face.style.top = (-h) + 'px';
+        if(type === 'enemy') {
+            face.style.backgroundColor = color;
+            if(className.includes('face-front')) {
+                face.style.background = `radial-gradient(circle at 30% 30%, black 5px, transparent 6px), radial-gradient(circle at 70% 30%, black 5px, transparent 6px), linear-gradient(to bottom, transparent 60%, black 60%, black 70%, transparent 70%), ${color}`;
+            }
+        }
+        parent.appendChild(face);
+    }
+
+    function createBox(parent, w, h) {
+        createFace(parent, w, h, `translateZ(${w/2}px)`, 'box-face', 'none', null);
+        createFace(parent, w, h, `rotateY(180deg) translateZ(${w/2}px)`, 'box-face', 'none', null);
+        createFace(parent, w, h, `rotateY(90deg) translateZ(${w/2}px)`, 'box-face', 'none', null);
+        createFace(parent, w, h, `rotateY(-90deg) translateZ(${w/2}px)`, 'box-face', 'none', null);
+        createFace(parent, w, w, `translateY(${-h/2}px) rotateX(90deg)`, 'box-face', 'none', null);
+    }
+
+    function spawnRandomObject(type) {
+        if(isInCastle) return;
+        let a = player.angle - 1.5 + Math.random()*3;
+        let d = 600 + Math.random()*1200;
+        createObject(type, player.x - Math.sin(a)*d, player.z + Math.cos(a)*d);
+    }
+
+    function updateObjects() {
+        let ax = -Math.sin(player.angle), az = Math.cos(player.angle);
+        gameObjects.forEach(o => {
+            if(!o.active || o.isDead) return;
+            let dx = player.x - o.x, dz = player.z - o.z;
+            let dist = Math.sqrt(dx*dx + dz*dz);
+
+            if(!isInCastle && dist > 2500 && o.type !== 'wall') {
+                o.el.remove(); o.active = false; spawnRandomObject(o.type); return;
+            }
+
+            if(o.type === 'enemy' || o.type === 'boss') {
+                let chaseDist = o.type==='boss' ? 500 : 300; 
+                
+                if(dist > 200 && dist < 1000) {
+                     o.x += (dx/dist)*2; o.z += (dz/dist)*2;
+                     o.el.style.transform = `translate3d(${o.x}px, 0, ${o.z}px)`;
+                } 
+                
+                if (dist <= chaseDist) {
+                    if (Date.now() - o.lastAttackTime > 2000) { 
+                        let angleToPlayer = Math.atan2(dx, -dz) + Math.PI/2; 
+                        let bulletSpeed = 20;
+                        let bvx = (dx/dist) * bulletSpeed;
+                        let bvz = (dz/dist) * bulletSpeed;
+                        createEnemyBullet(o.x, o.y - (o.type==='boss'?200:60), o.z, bvx, bvz);
+                        o.lastAttackTime = Date.now();
+                    }
+                }
+            }
+            if(o.type === 'treasure' && !isInCastle && dist < 80) {
+                o.el.remove(); o.active = false;
+                let g = 50 + Math.floor(Math.random()*50); player.gold += g;
+                spawnRandomObject('treasure');
+            }
+        });
+        gameObjects = gameObjects.filter(o => o.active);
+    }
+
+    function createEnemyBullet(x, y, z, vx, vz) {
+        const el = document.createElement('div');
+        el.className = 'bullet enemy-bullet';
+        world.appendChild(el);
+        bullets.push({ el: el, x: x, y: y, z: z, vx: vx, vz: vz, owner: 'enemy', life: 100 });
+    }
+
+    function showDamage(targetEl, text) {
+        const dmg = document.createElement('div'); dmg.className = 'dmg-text';
+        dmg.innerText = text; targetEl.appendChild(dmg);
+        setTimeout(() => dmg.remove(), 800);
+    }
+
+    function updateUI() {
+        uiStatus.innerHTML = `HP: ${Math.floor(player.hp)} / ${player.maxHp}<br>金幣: ${player.gold}<br>攻擊: ${player.damage} ${player.defense>0?'(盾防中)':''}`;
+    }
+
+    init();
+</script>
+</body>
+</html>
