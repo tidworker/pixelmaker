@@ -11,7 +11,6 @@
         }
         
         :root {
-            /* 黑灰配色系統 */
             --bg-dark: #0A0A0A;
             --surface: #1A1A1A;
             --surface-light: #2A2A2A;
@@ -21,6 +20,7 @@
             --text-main: #FFFFFF;
             --text-muted: #999999;
             --border-color: #333333;
+            --success: #6A9A6A;
         }
 
         body, html {
@@ -57,7 +57,6 @@
             color: var(--text-main);
         }
 
-        /* --- 分頁容器設定 --- */
         .tab-content {
             display: none;
             flex: 1;
@@ -68,7 +67,7 @@
             display: flex;
         }
 
-        /* --- 繪圖頁面：畫布完美置中區 --- */
+        /* --- 繪圖頁面 --- */
         .workspace-container {
             flex: 1;
             display: flex; justify-content: center; align-items: center;
@@ -96,7 +95,7 @@
         #previewCanvas { z-index: 3; }
         #gridCanvas { z-index: 4; opacity: 0.15; transition: opacity 0.2s; }
 
-        /* --- 底部黑灰工具列 --- */
+        /* --- 底部工具列 --- */
         .bottom-panel {
             flex-shrink: 0;
             background: var(--surface);
@@ -113,7 +112,6 @@
         }
         .scroll-row::-webkit-scrollbar { display: none; }
 
-        /* 方形色票 */
         .color {
             flex: 0 0 36px; width: 36px; height: 36px;
             border-radius: 0;
@@ -129,7 +127,6 @@
             z-index: 2;
         }
 
-        /* 方形工具按鈕 */
         .tool {
             flex: 0 0 auto;
             padding: 10px 18px;
@@ -156,60 +153,61 @@
         }
 
         .text-preview-wrapper {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
+            flex: 1; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; width: 100%;
         }
 
-        /* 預覽畫布區塊 */
         .preview-container {
-            width: 75vw; height: 75vw;
-            max-width: 300px; max-height: 300px;
-            background: #FFFFFF;
-            border-radius: 0;
-            margin-bottom: 15px;
-            position: relative;
-            cursor: grab;
-            border: 1px solid var(--border-color);
+            width: 75vw; height: 75vw; max-width: 300px; max-height: 300px;
+            background: #FFFFFF; border-radius: 0;
+            margin-bottom: 15px; position: relative;
+            cursor: grab; border: 1px solid var(--border-color);
         }
         .preview-container:active { cursor: grabbing; }
-        #textPreviewCanvas {
-            width: 100%; height: 100%;
-            image-rendering: pixelated;
-            pointer-events: auto;
-        }
+        #textPreviewCanvas { width: 100%; height: 100%; image-rendering: pixelated; pointer-events: auto; }
 
-        .hint-text {
-            font-size: 13px; color: var(--text-muted);
-            text-align: center;
-        }
+        .hint-text { font-size: 13px; color: var(--text-muted); text-align: center; }
 
         .form-group {
             background: var(--surface); width: 85%; max-width: 400px;
-            border-radius: 0; padding: 20px;
-            border: 1px solid var(--border-color);
-            display: flex; flex-direction: column; gap: 15px;
-            margin-bottom: 0;
+            border-radius: 0; padding: 20px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; gap: 15px; margin-bottom: 0;
         }
         .form-row { display: flex; justify-content: space-between; align-items: center; }
         .form-row label { font-size: 15px; color: var(--text-muted); font-weight: bold;}
-        .form-row input {
+        
+        .form-row input[type="text"], .form-row input[type="number"], .full-input {
             background: var(--surface-light); color: var(--text-main);
             border: 1px solid var(--border-color); border-radius: 0; padding: 10px;
-            font-size: 16px; text-align: center; width: 80px;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-size: 16px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
-        .form-row input:focus { outline: 1px solid var(--text-muted); }
+        .form-row input[type="text"]:focus, .form-row input[type="number"]:focus, .full-input:focus { outline: 1px solid var(--text-muted); }
+        .short-input { text-align: center; width: 80px; }
+        .full-input { width: 100%; box-sizing: border-box; text-align: left; margin-bottom: 5px; }
         
         .btn-generate {
             background: var(--primary); color: white; border: none;
             padding: 14px; border-radius: 0; font-size: 16px; font-weight: bold;
-            margin-top: 10px; cursor: pointer; border: 1px solid var(--border-color);
+            margin-top: 5px; cursor: pointer; border: 1px solid var(--border-color);
         }
         .btn-generate:active { background: var(--primary-active); }
+
+        /* 文本系統專用導航與開關 */
+        .sequence-nav { display: flex; justify-content: space-between; align-items: center; }
+        .nav-btn {
+            background: var(--surface-light); color: var(--text-main);
+            border: 1px solid var(--border-color); padding: 8px 15px;
+            font-weight: bold; cursor: pointer; transition: 0.2s; border-radius: 0;
+        }
+        .nav-btn:active { background: var(--surface-hover); }
+
+        /* 方形開關 */
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--surface-light); transition: .2s; border: 1px solid var(--border-color); }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: var(--text-muted); transition: .2s; }
+        input:checked + .slider { background-color: var(--success); border-color: var(--success); }
+        input:checked + .slider:before { transform: translateX(20px); background-color: black; }
 
         #fontPreload { font-family: 'Bakudai-Regular'; visibility: hidden; position: absolute; }
     </style>
@@ -258,13 +256,33 @@
         </div>
 
         <div class="form-group">
-            <div class="form-row">
-                <label>輸入字元</label>
-                <input type="text" id="textInput" maxlength="1" value="愛">
+            <div>
+                <label style="font-size: 15px; color: var(--text-muted); font-weight: bold; margin-bottom: 8px; display: block;">文本系統</label>
+                <input type="text" id="sequenceInput" class="full-input" placeholder="請輸入一串連續文字" oninput="initSequence()">
             </div>
+            
+            <div class="sequence-nav">
+                <button class="nav-btn" onclick="prevChar()">上一字</button>
+                <span id="seqStatus" style="font-weight: bold; color: var(--text-main); font-size: 14px;">- / -</span>
+                <button class="nav-btn" onclick="nextChar()">下一字</button>
+            </div>
+
+            <div class="form-row">
+                <label>目前字元</label>
+                <input type="text" id="textInput" class="short-input" maxlength="1" value="愛" oninput="manualCharChange()">
+            </div>
+
+            <div class="form-row">
+                <label>標記完成</label>
+                <label class="switch">
+                    <input type="checkbox" id="doneSwitch" onchange="toggleDone()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
             <div class="form-row">
                 <label>文字大小</label>
-                <input type="number" id="fontSize" value="80">
+                <input type="number" id="fontSize" class="short-input" value="80" oninput="previewText()">
             </div>
             <button class="btn-generate" onclick="applyText()">套用並返回</button>
         </div>
@@ -285,8 +303,11 @@
         
         let history = [];
         let textX = 50, textY = 10;
-
         let lockedMask = new Array(GRID_SIZE * GRID_SIZE).fill(true);
+
+        // 文本系統狀態
+        let seqData = [];
+        let seqIndex = 0;
 
         const workspace = document.getElementById('workspace');
         const mainCanvas = document.getElementById('mainCanvas');
@@ -299,10 +320,8 @@
         const textPreviewCanvas = document.getElementById('textPreviewCanvas');
         const textPreviewCtx = textPreviewCanvas.getContext('2d', { willReadFrequently: true });
 
-        // 畫布變換狀態
         let transform = { scale: 1, x: 0, y: 0 };
         
-        // 手勢與防誤觸狀態
         let panZoomCooldown = false;
         let cooldownTimer = null;
 
@@ -316,12 +335,10 @@
             scaleStart: 1
         };
 
-        // 雙擊與長按計時器
         let lastTapTime = 0;
         let longPressTimer = null;
         let toolBeforeLongPress = null;
 
-        // 文字排版拖曳狀態
         let textDrag = { active: false, startX: 0, startY: 0, initialTextX: 50, initialTextY: 10 };
 
         function init() {
@@ -355,20 +372,72 @@
             workspace.addEventListener('touchmove', handleTouchMove, { passive: false });
             workspace.addEventListener('touchend', handleTouchEnd, { passive: false });
 
-            document.getElementById('textInput').addEventListener('input', previewText);
-            document.getElementById('fontSize').addEventListener('input', previewText);
-
             textPreviewCanvas.addEventListener('touchstart', handleTextTouchStart, { passive: false });
             textPreviewCanvas.addEventListener('touchmove', handleTextTouchMove, { passive: false });
             textPreviewCanvas.addEventListener('touchend', handleTextTouchEnd, { passive: false });
         }
 
+        /* --- 文本系統邏輯 --- */
+        function initSequence() {
+            const str = document.getElementById('sequenceInput').value;
+            if (!str) {
+                seqData = []; updateSeqUI(); return;
+            }
+            const newSeq = Array.from(str).map(char => {
+                const existing = seqData.find(item => item.char === char);
+                return { char: char, done: existing ? existing.done : false };
+            });
+            seqData = newSeq;
+            if (seqIndex >= seqData.length) seqIndex = Math.max(0, seqData.length - 1);
+            updateSeqUI();
+        }
+
+        function updateSeqUI() {
+            if (seqData.length === 0) {
+                document.getElementById('seqStatus').innerText = '- / -';
+                return;
+            }
+            const current = seqData[seqIndex];
+            document.getElementById('seqStatus').innerText = `${seqIndex + 1} / ${seqData.length}`;
+            document.getElementById('textInput').value = current.char;
+            document.getElementById('doneSwitch').checked = current.done;
+
+            // 若標記完成，將顯示框變成淺灰色
+            const txtInput = document.getElementById('textInput');
+            if (current.done) {
+                txtInput.style.backgroundColor = '#CCCCCC';
+                txtInput.style.color = '#000000';
+            } else {
+                txtInput.style.backgroundColor = 'var(--surface-light)';
+                txtInput.style.color = 'var(--text-main)';
+            }
+            previewText();
+        }
+
+        function nextChar() {
+            if (seqIndex < seqData.length - 1) { seqIndex++; updateSeqUI(); }
+        }
+        function prevChar() {
+            if (seqIndex > 0) { seqIndex--; updateSeqUI(); }
+        }
+        function toggleDone() {
+            if (seqData.length > 0) {
+                seqData[seqIndex].done = document.getElementById('doneSwitch').checked;
+                updateSeqUI();
+            }
+        }
+        function manualCharChange() {
+            if (seqData.length > 0) {
+                seqData[seqIndex].char = document.getElementById('textInput').value;
+            }
+            previewText();
+        }
+
+        /* --- 系統切換 --- */
         function switchTab(tabId, btn) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.segment-btn').forEach(el => el.classList.remove('active'));
-            if(tabId === 'textTab') {
-                previewText();
-            }
+            if(tabId === 'textTab') { previewText(); }
             document.getElementById(tabId).classList.add('active');
             btn.classList.add('active');
         }
@@ -382,11 +451,9 @@
         function toggleGrid() {
             const btn = document.getElementById('gridToggleBtn');
             if (gridCanvas.style.opacity === '0' || gridCanvas.style.opacity === 0) {
-                gridCanvas.style.opacity = '0.15'; 
-                btn.classList.remove('disabled-look');
+                gridCanvas.style.opacity = '0.15'; btn.classList.remove('disabled-look');
             } else {
-                gridCanvas.style.opacity = '0'; 
-                btn.classList.add('disabled-look');
+                gridCanvas.style.opacity = '0'; btn.classList.add('disabled-look');
             }
         }
 
@@ -402,22 +469,31 @@
             return !lockedMask[y * GRID_SIZE + x];
         }
 
+        /* --- 手勢互動邏輯 --- */
         function handleTouchStart(e) {
             e.preventDefault(); 
             
-            // 單指：處理繪圖、雙擊填色、長按直線
             if (e.touches.length === 1) {
-                // 若在防誤觸冷卻期，直接忽略
                 if (panZoomCooldown) return;
 
                 const now = Date.now();
                 const pos = getCanvasPos(e.touches[0].clientX, e.touches[0].clientY);
 
-                // 判斷雙擊 (Double Tap) -> 觸發油漆桶填滿
+                // 判斷雙擊 (Double Tap)
                 if (now - lastTapTime < 300) {
                     clearTimeout(longPressTimer);
-                    saveState();
-                    floodFill(pos.x, pos.y, currentColor);
+                    
+                    const imgData = mainCtx.getImageData(0, 0, GRID_SIZE, GRID_SIZE);
+                    const targetColor = getPixelColor(imgData.data, pos.x, pos.y);
+                    const isWhite = targetColor.r >= 200 && targetColor.g >= 200 && targetColor.b >= 200;
+
+                    if (isWhite) {
+                        undo(); // 連點白色觸發復原
+                    } else {
+                        saveState(); // 連點顏色區域保留油漆桶功能
+                        floodFill(pos.x, pos.y, currentColor);
+                    }
+
                     lastTapTime = 0; 
                     gestureState.mode = 'ignore'; 
                     return;
@@ -432,34 +508,26 @@
                 toolBeforeLongPress = currentTool;
                 
                 if (currentTool === 'pencil') {
-                    saveState(); 
-                    drawPixel(mainCtx, pos.x, pos.y, currentColor);
+                    saveState(); drawPixel(mainCtx, pos.x, pos.y, currentColor);
                 } else if (currentTool === 'paintBucket') {
-                    saveState(); 
-                    floodFill(pos.x, pos.y, currentColor);
+                    saveState(); floodFill(pos.x, pos.y, currentColor);
                 }
 
-                // 長按偵測 (0.4秒)
                 longPressTimer = setTimeout(() => {
                     if (gestureState.mode === 'draw') {
-                        // 如果原本是畫筆，復原剛畫下的那一格像素
-                        if (toolBeforeLongPress === 'pencil') {
-                            undo();
-                        }
-                        setTool('lineTool'); // 切換為直線工具
-                        if (navigator.vibrate) navigator.vibrate(40); // 震動回饋
+                        if (toolBeforeLongPress === 'pencil') undo();
+                        setTool('lineTool');
+                        if (navigator.vibrate) navigator.vibrate(40);
                         prevCtx.clearRect(0, 0, GRID_SIZE, GRID_SIZE);
                     }
                 }, 400);
 
-            // 雙指：標準平移與縮放 (Pan & Zoom)
+            // 雙指分離偵測模式 (防同時移動縮放)
             } else if (e.touches.length === 2) {
                 clearTimeout(longPressTimer);
-                gestureState.mode = 'panzoom'; 
+                gestureState.mode = 'panzoom-detect'; 
                 
-                const t1 = e.touches[0]; 
-                const t2 = e.touches[1];
-                
+                const t1 = e.touches[0]; const t2 = e.touches[1];
                 const cx = (t1.clientX + t2.clientX) / 2;
                 const cy = (t1.clientY + t2.clientY) / 2;
                 const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
@@ -476,16 +544,12 @@
         function handleTouchMove(e) {
             e.preventDefault();
             
-            // 單指：繪圖
             if (e.touches.length === 1 && gestureState.mode === 'draw') {
                 if (panZoomCooldown) return;
 
                 const dxMove = Math.abs(e.touches[0].clientX - gestureState.touchStartX);
                 const dyMove = Math.abs(e.touches[0].clientY - gestureState.touchStartY);
-                // 手指滑動超過閾值，取消長按判定
-                if (dxMove > 5 || dyMove > 5) {
-                    clearTimeout(longPressTimer);
-                }
+                if (dxMove > 5 || dyMove > 5) clearTimeout(longPressTimer);
 
                 const pos = getCanvasPos(e.touches[0].clientX, e.touches[0].clientY);
                 if (currentTool === 'pencil') {
@@ -496,26 +560,31 @@
                     drawLine(prevCtx, gestureState.startX, gestureState.startY, pos.x, pos.y, currentColor);
                 }
 
-            // 雙指：同時執行平移與縮放
-            } else if (e.touches.length === 2 && gestureState.mode === 'panzoom') {
-                const t1 = e.touches[0]; 
-                const t2 = e.touches[1];
-                
+            // 判斷並鎖定純移動或純縮放
+            } else if (e.touches.length === 2) {
+                const t1 = e.touches[0]; const t2 = e.touches[1];
                 const cx = (t1.clientX + t2.clientX) / 2;
                 const cy = (t1.clientY + t2.clientY) / 2;
                 const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
 
-                // 計算縮放
-                let newScale = gestureState.scaleStart * (dist / gestureState.pinchStartDist);
-                transform.scale = Math.max(0.5, Math.min(newScale, 10)); 
+                if (gestureState.mode === 'panzoom-detect') {
+                    const distChange = Math.abs(dist - gestureState.pinchStartDist);
+                    const panChange = Math.hypot(cx - gestureState.pinchStartCenter.x, cy - gestureState.pinchStartCenter.y);
+                    if (distChange > 15) gestureState.mode = 'zoom';
+                    else if (panChange > 15) gestureState.mode = 'pan';
+                }
 
-                // 計算平移
-                const dxPan = cx - gestureState.pinchStartCenter.x;
-                const dyPan = cy - gestureState.pinchStartCenter.y;
-                transform.x = gestureState.panStartOrigin.x + dxPan;
-                transform.y = gestureState.panStartOrigin.y + dyPan;
-
-                applyTransform();
+                if (gestureState.mode === 'zoom') {
+                    let newScale = gestureState.scaleStart * (dist / gestureState.pinchStartDist);
+                    transform.scale = Math.max(0.5, Math.min(newScale, 10)); 
+                    applyTransform();
+                } else if (gestureState.mode === 'pan') {
+                    const dxPan = cx - gestureState.pinchStartCenter.x;
+                    const dyPan = cy - gestureState.pinchStartCenter.y;
+                    transform.x = gestureState.panStartOrigin.x + dxPan;
+                    transform.y = gestureState.panStartOrigin.y + dyPan;
+                    applyTransform();
+                }
             }
         }
 
@@ -523,13 +592,11 @@
             e.preventDefault();
             clearTimeout(longPressTimer);
 
-            // 啟動 0.5 秒防誤觸冷卻
-            if (gestureState.mode === 'panzoom' && e.touches.length < 2) {
+            // 防誤觸冷卻鎖定 (0.5秒)
+            if ((gestureState.mode === 'zoom' || gestureState.mode === 'pan' || gestureState.mode === 'panzoom-detect') && e.touches.length < 2) {
                 panZoomCooldown = true;
                 clearTimeout(cooldownTimer);
-                cooldownTimer = setTimeout(() => {
-                    panZoomCooldown = false;
-                }, 500);
+                cooldownTimer = setTimeout(() => { panZoomCooldown = false; }, 500);
                 if (e.touches.length > 0) gestureState.mode = 'ignore'; 
             }
 
@@ -543,9 +610,7 @@
             }
 
             if (e.touches.length === 0) {
-                if (gestureState.mode !== 'ignore' || panZoomCooldown === false) {
-                    gestureState.mode = null;
-                }
+                if (gestureState.mode !== 'ignore' || panZoomCooldown === false) gestureState.mode = null;
             }
         }
 
@@ -563,11 +628,8 @@
             let dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
             let dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
             let err = dx + dy, e2;
-
             while (true) {
-                if (ctx !== mainCtx || canDraw(x0, y0)) {
-                    ctx.fillRect(x0, y0, 1, 1);
-                }
+                if (ctx !== mainCtx || canDraw(x0, y0)) ctx.fillRect(x0, y0, 1, 1);
                 if (x0 === x1 && y0 === y1) break;
                 e2 = 2 * err;
                 if (e2 >= dy) { err += dy; x0 += sx; }
@@ -588,7 +650,6 @@
             while (stack.length > 0) {
                 const [x, y] = stack.pop();
                 const pos = (y * GRID_SIZE + x) * 4;
-
                 if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) continue;
                 if (data[pos] !== targetColor.r || data[pos+1] !== targetColor.g || data[pos+2] !== targetColor.b) continue;
 
@@ -614,7 +675,7 @@
             }
         }
         
-        /* --- 文字排版：滑動位移邏輯 --- */
+        /* --- 文字排版：高阻力滑動位移 --- */
         function handleTextTouchStart(e) {
             e.preventDefault();
             if (e.touches.length === 1) {
@@ -705,14 +766,12 @@
             tCtx.fillText(text, textX, textY);
 
             const imgData = tCtx.getImageData(0, 0, GRID_SIZE, GRID_SIZE);
-            
             for(let i=0; i<imgData.data.length; i+=4) {
                 const r = imgData.data[i];
                 const alpha = imgData.data[i+3];
                 const isWhite = (alpha < 128) || (r >= 200); 
 
                 lockedMask[i/4] = isWhite; 
-                
                 if (isWhite) {
                     imgData.data[i] = 255; imgData.data[i+1] = 255; imgData.data[i+2] = 255; imgData.data[i+3] = 255;
                 } else {
@@ -721,12 +780,21 @@
             }
             mainCtx.putImageData(imgData, 0, 0);
             
+            // 套用後若是系統有字，自動標記完成並切換到下一字
+            if (seqData.length > 0) {
+                document.getElementById('doneSwitch').checked = true;
+                toggleDone();
+                nextChar();
+            }
+            
             switchTab('drawTab', document.querySelectorAll('.segment-btn')[0]);
         }
 
         function saveImage() {
             const link = document.createElement('a');
-            link.download = 'pixel_design.png';
+            // 檔名使用文字本身
+            const fileName = document.getElementById('textInput').value || 'pixel';
+            link.download = `${fileName}.png`;
             link.href = mainCanvas.toDataURL('image/png');
             link.click();
         }
