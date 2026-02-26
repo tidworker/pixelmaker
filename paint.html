@@ -92,7 +92,6 @@
             image-rendering: pixelated;
             pointer-events: none;
         }
-        /* 將網格 z-index 提高，確保不會被遮擋 */
         #mainCanvas { z-index: 2; }
         #previewCanvas { z-index: 3; }
         #gridCanvas { z-index: 4; opacity: 0.15; transition: opacity 0.2s; }
@@ -121,7 +120,6 @@
             border: 1px solid var(--border-color);
             display: flex; align-items: center; justify-content: center;
             font-size: 12px; font-weight: bold; color: white;
-            text-shadow: 0px 1px 2px rgba(0,0,0,0.8);
             transition: 0.1s ease;
             box-sizing: border-box;
         }
@@ -154,7 +152,16 @@
         #textTab {
             background: var(--bg-dark);
             align-items: center; 
-            justify-content: center; /* 完全垂直水平置中 */
+            padding-bottom: calc(20px + env(safe-area-inset-bottom));
+        }
+
+        .text-preview-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
         }
 
         /* 預覽畫布區塊 */
@@ -177,7 +184,7 @@
 
         .hint-text {
             font-size: 13px; color: var(--text-muted);
-            margin-bottom: 30px; text-align: center;
+            text-align: center;
         }
 
         .form-group {
@@ -185,6 +192,7 @@
             border-radius: 0; padding: 20px;
             border: 1px solid var(--border-color);
             display: flex; flex-direction: column; gap: 15px;
+            margin-bottom: 0;
         }
         .form-row { display: flex; justify-content: space-between; align-items: center; }
         .form-row label { font-size: 15px; color: var(--text-muted); font-weight: bold;}
@@ -192,7 +200,6 @@
             background: var(--surface-light); color: var(--text-main);
             border: 1px solid var(--border-color); border-radius: 0; padding: 10px;
             font-size: 16px; text-align: center; width: 80px;
-            /* 恢復系統一般字體 */
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
         .form-row input:focus { outline: 1px solid var(--text-muted); }
@@ -243,10 +250,12 @@
     </div>
 
     <div id="textTab" class="tab-content">
-        <div class="preview-container">
-            <canvas id="textPreviewCanvas" width="100" height="100"></canvas>
+        <div class="text-preview-wrapper">
+            <div class="preview-container">
+                <canvas id="textPreviewCanvas" width="100" height="100"></canvas>
+            </div>
+            <div class="hint-text">在畫面上單指滑動，調整文字位置</div>
         </div>
-        <div class="hint-text">在畫面上單指滑動，調整文字位置</div>
 
         <div class="form-group">
             <div class="form-row">
@@ -293,7 +302,10 @@
         // 畫布變換狀態
         let transform = { scale: 1, x: 0, y: 0 };
         
-        // 手勢狀態
+        // 手勢與防誤觸狀態
+        let panZoomCooldown = false;
+        let cooldownTimer = null;
+
         let gestureState = { 
             mode: null, 
             startX: 0, startY: 0,
@@ -395,6 +407,9 @@
             
             // 單指：處理繪圖、雙擊填色、長按直線
             if (e.touches.length === 1) {
+                // 若在防誤觸冷卻期，直接忽略
+                if (panZoomCooldown) return;
+
                 const now = Date.now();
                 const pos = getCanvasPos(e.touches[0].clientX, e.touches[0].clientY);
 
@@ -463,6 +478,8 @@
             
             // 單指：繪圖
             if (e.touches.length === 1 && gestureState.mode === 'draw') {
+                if (panZoomCooldown) return;
+
                 const dxMove = Math.abs(e.touches[0].clientX - gestureState.touchStartX);
                 const dyMove = Math.abs(e.touches[0].clientY - gestureState.touchStartY);
                 // 手指滑動超過閾值，取消長按判定
@@ -488,11 +505,11 @@
                 const cy = (t1.clientY + t2.clientY) / 2;
                 const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
 
-                // 計算縮放 (雙指分開/靠攏)
+                // 計算縮放
                 let newScale = gestureState.scaleStart * (dist / gestureState.pinchStartDist);
                 transform.scale = Math.max(0.5, Math.min(newScale, 10)); 
 
-                // 計算平移 (雙指中心點移動)
+                // 計算平移
                 const dxPan = cx - gestureState.pinchStartCenter.x;
                 const dyPan = cy - gestureState.pinchStartCenter.y;
                 transform.x = gestureState.panStartOrigin.x + dxPan;
@@ -506,13 +523,30 @@
             e.preventDefault();
             clearTimeout(longPressTimer);
 
-            if (gestureState.mode === 'draw' && currentTool === 'lineTool' && e.changedTouches.length > 0) {
-                saveState();
-                const pos = getCanvasPos(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-                prevCtx.clearRect(0, 0, GRID_SIZE, GRID_SIZE);
-                drawLine(mainCtx, gestureState.startX, gestureState.startY, pos.x, pos.y, currentColor);
+            // 啟動 0.5 秒防誤觸冷卻
+            if (gestureState.mode === 'panzoom' && e.touches.length < 2) {
+                panZoomCooldown = true;
+                clearTimeout(cooldownTimer);
+                cooldownTimer = setTimeout(() => {
+                    panZoomCooldown = false;
+                }, 500);
+                if (e.touches.length > 0) gestureState.mode = 'ignore'; 
             }
-            if (e.touches.length === 0) gestureState.mode = null;
+
+            if (gestureState.mode === 'draw' && currentTool === 'lineTool' && e.changedTouches.length > 0) {
+                if (!panZoomCooldown) {
+                    saveState();
+                    const pos = getCanvasPos(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+                    prevCtx.clearRect(0, 0, GRID_SIZE, GRID_SIZE);
+                    drawLine(mainCtx, gestureState.startX, gestureState.startY, pos.x, pos.y, currentColor);
+                }
+            }
+
+            if (e.touches.length === 0) {
+                if (gestureState.mode !== 'ignore' || panZoomCooldown === false) {
+                    gestureState.mode = null;
+                }
+            }
         }
 
         function applyTransform() {
@@ -602,9 +636,11 @@
                 const scaleX = rect.width / GRID_SIZE;
                 const scaleY = rect.height / GRID_SIZE;
 
-                // 物理距離換算成畫布的像素網格
-                const logicalDx = Math.round(dx / scaleX);
-                const logicalDy = Math.round(dy / scaleY);
+                // 阻力係數：數值越大，需要的物理滑動距離越長
+                const dragResistance = 4;
+
+                const logicalDx = Math.round(dx / (scaleX * dragResistance));
+                const logicalDy = Math.round(dy / (scaleY * dragResistance));
 
                 if (logicalDx !== 0 || logicalDy !== 0) {
                     textX = textDrag.initialTextX + logicalDx;
