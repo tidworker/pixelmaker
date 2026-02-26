@@ -2,490 +2,587 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>點陣圖編輯器</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GAMEWORKER 點陣編輯器</title>
     <style>
-        body {
+        @font-face {
+            font-family: 'Bakudai-Regular';
+            src: url(https://cdn.jsdelivr.net/gh/max32002/bakudaifont@1.48/webfont/Bakudai-Regular.woff2) format("woff2");
+        }
+        
+        :root {
+            --bg-console: #d1d5d1;     /* 復古掌機塑膠灰白 */
+            --bezel-color: #5a5a5a;    /* 螢幕外框深灰 */
+            --screen-bg: #9ea786;      /* 經典液晶綠 */
+            --btn-dark: #2c2c2c;       /* 十字鍵與邊框黑 */
+            --btn-action: #9b2844;     /* A/B鍵經典酒紅 */
+            --text-dark: #222;
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: var(--bg-console);
+            color: var(--text-dark);
+            font-family: 'Bakudai-Regular', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- 頂部標題與插槽(分頁) --- */
+        .header {
+            padding: 15px 15px 0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin: 0;
-            padding: 20px;
-            background-color: #272727;
+            z-index: 10;
+            border-bottom: 4px solid var(--btn-dark);
+            box-shadow: 0 4px 0 rgba(255,255,255,0.6);
         }
-        #canvasContainer {
-            overflow: hidden;
-            touch-action: none;
-            width: 380px;
-            height: 700px;
+        .header h3 { 
+            margin: 0 0 15px 0; 
+            font-size: 20px; 
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 0px #fff;
+        }
+        .tab-container { display: flex; gap: 10px; width: 100%; justify-content: center; }
+        .tab-btn {
+            flex: 1;
+            padding: 12px 0;
+            background: #aaa;
+            color: var(--btn-dark);
+            border: 4px solid var(--btn-dark);
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            font-size: 16px;
+            font-family: 'Bakudai-Regular', sans-serif;
+            cursor: pointer;
+            box-shadow: inset -2px -2px 0px rgba(0,0,0,0.2), inset 2px 2px 0px rgba(255,255,255,0.7);
+        }
+        .tab-btn.active { 
+            background: var(--bg-console); 
+            border-bottom: 4px solid var(--bg-console);
+            margin-bottom: -4px;
+            z-index: 2;
+        }
+
+        /* --- 中間螢幕工作區 --- */
+        .main-area {
             position: relative;
-            border: 1px solid #fff;
-            border-radius: 5px;
-        }
-        #canvas {
-            display: grid;
-            grid-template-columns: repeat(100, 7px);
-            grid-template-rows: repeat(100, 7px);
-            width: 700px;
-            height: 700px;
-            position: absolute;
-            top: 0;
-            left: 0;
-            transform-origin: 0 0;
-        }
-        .pixel {
-            width: 7px;
-            height: 7px;
-            box-sizing: border-box;
-        }
-        .pixel.with-grid {
-            border: 1px solid rgba(0, 0, 0, 0.2);
-        }
-        #colorPalette {
+            flex: 1;
+            width: 100%;
             display: flex;
-            flex-wrap: wrap;
-            max-width: 390px;
-            justify-content: center;
-            margin-top: 10px;
-        }
-        .color {
-            width: 32px;
-            height: 32px;
-            margin: 2px;
-            cursor: pointer;
-            border: 1px solid #000;
-            display: flex;
+            flex-direction: column;
             align-items: center;
+            padding-top: 15px;
+        }
+
+        /* 掌機螢幕外框 */
+        .screen-bezel {
+            background: var(--bezel-color);
+            padding: 10px 10px 25px 10px;
+            border-radius: 10px 10px 35px 10px;
+            border: 3px solid var(--btn-dark);
+            box-shadow: inset 4px 4px 10px rgba(0,0,0,0.6), 4px 4px 0px rgba(255,255,255,0.8);
+            position: relative;
+            width: 300px;
+            height: 300px;
+            display: flex;
             justify-content: center;
-            font-size: 14px;
-            color: #fff;
-            border-radius: 5px;
+            align-items: center;
+            overflow: hidden;
         }
-        .selected {
-            border: 2px solid white;
+        .power-light {
+            position: absolute;
+            top: 25px; left: 10px;
+            width: 8px; height: 8px;
+            background: #ff3b3b;
+            border-radius: 50%;
+            border: 2px solid #222;
+            box-shadow: 0 0 6px #ff3b3b;
+            z-index: 5;
         }
-        #fileInput {
-            width: 170px;
-            margin: 5px;
-            cursor: pointer;
-            padding: 4px 4px;
-            border: 1px solid #000;
-            background-color: #fff;
-            border-radius: 5px;
+        .power-light::after {
+            content: "BATTERY";
+            position: absolute;
+            top: 12px; left: -4px;
+            font-size: 8px; color: #aaa;
+        }
 
-        }
-        #fileName {
-            width: 100px;
-            margin: 5px;
-            cursor: pointer;
-            padding: 4px 4px;
-            border: 1px solid #000;
+        #workspace {
+            position: relative;
+            width: 260px;
+            height: 260px;
+            transform-origin: center center;
             background-color: #fff;
-            border-radius: 5px;
+            border: 3px solid #111;
+            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.3);
+        }
+        canvas {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            image-rendering: pixelated;
+            pointer-events: none;
+        }
+        #gridCanvas { opacity: 0.15; z-index: 1; }
+        #mainCanvas { z-index: 2; }
+        #previewCanvas { z-index: 3; }
 
+        /* --- 底部控制區 --- */
+        .bottom-panel {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: var(--bg-console);
+            padding: 10px 0 env(safe-area-inset-bottom, 20px) 0;
+            z-index: 10;
         }
-        #tools {
-            margin-top: 10px;
-            border-radius: 5px;
+
+        .scroll-row {
+            display: flex; overflow-x: auto;
+            padding: 5px 15px; gap: 10px;
+            scrollbar-width: none; align-items: center;
         }
+        .scroll-row::-webkit-scrollbar { display: none; }
+
+        /* 色票 */
+        .color {
+            flex: 0 0 32px; width: 32px; height: 32px;
+            border: 3px solid var(--btn-dark);
+            border-radius: 6px;
+            box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; color: white; text-shadow: 0px 0px 3px black;
+        }
+        .color.selected { 
+            border-color: white; transform: translateY(-2px); 
+            box-shadow: 0 4px 0 var(--btn-dark); 
+        }
+
+        /* 傾斜工具按鍵 (Start/Select 風格) */
         .tool {
-            margin: 5px;
-            cursor: pointer;
-            padding: 5px 10px;
-            border: 1px solid #000;
-            background-color: #fff;
-            border-radius: 5px;
+            flex: 0 0 auto;
+            padding: 8px 14px;
+            background: #555; color: white;
+            border: 3px solid var(--btn-dark);
+            border-radius: 20px;
+            font-family: 'Bakudai-Regular'; font-size: 14px;
+            box-shadow: -2px 2px 0 var(--btn-dark);
+            transform: rotate(-10deg);
+            margin: 10px 5px 0 5px;
         }
-        .active-tool {
-            background-color: #000;
-            color: #fff;
+        .tool:active { transform: rotate(-10deg) translate(-2px, 2px); box-shadow: 0 0 0 var(--btn-dark); }
+        .tool.active-tool { background: var(--screen-bg); color: #111; }
+
+        /* 圓形 A/B 按鍵 */
+        .ab-btn-wrapper { display: flex; flex-direction: column; align-items: center; gap: 5px; margin-left: 10px;}
+        .ab-btn-wrapper span { font-size: 12px; font-weight: bold; color: var(--btn-dark); }
+        .action-btn {
+            flex: 0 0 auto;
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            background: var(--btn-action); color: #fff;
+            font-family: 'Bakudai-Regular'; font-size: 16px;
+            border: 3px solid var(--btn-dark);
+            box-shadow: 0 4px 0 var(--btn-dark), inset 2px 2px 4px rgba(255,255,255,0.3);
         }
-        .clicked-tool {
-            background-color: #555;
+        .action-btn:active { transform: translateY(4px); box-shadow: 0 0 0 var(--btn-dark); }
+
+        /* --- 文字生成介面 --- */
+        #textTab {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-console);
+            z-index: 20; display: none;
+            flex-direction: column; align-items: center;
+            padding-top: 30px;
         }
+        #textTab.active { display: flex; }
+
+        /* 卡匣風格輸入框 */
+        .cartridge-box {
+            background: #e0e0e0;
+            border: 4px solid var(--btn-dark); border-radius: 8px;
+            padding: 20px; width: 260px;
+            box-shadow: inset 2px 2px 0 #fff, inset -2px -2px 0 #aaa, 4px 4px 0 rgba(0,0,0,0.2);
+            display: flex; flex-direction: column; gap: 15px;
+        }
+        .gb-input-row { display: flex; align-items: center; justify-content: space-between; }
+        .gb-input-row label { font-size: 16px; font-weight: bold; }
+        .gb-input-row input { 
+            width: 70px; padding: 8px; font-family: 'Bakudai-Regular'; font-size: 16px;
+            border: 3px solid var(--btn-dark); text-align: center; background: #fff;
+        }
+        .gb-start-btn {
+            background: var(--btn-dark); color: white;
+            font-family: 'Bakudai-Regular'; font-size: 16px;
+            padding: 10px; border: none; border-radius: 20px;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.5); margin-top: 10px; cursor: pointer;
+        }
+        .gb-start-btn:active { transform: translateY(4px); box-shadow: 0 0 0 transparent; }
+
+        /* 經典十字鍵 (D-Pad) */
+        .d-pad { position: relative; width: 140px; height: 140px; margin: 30px auto; }
+        .d-pad button {
+            position: absolute; width: 46px; height: 46px;
+            background: var(--btn-dark); border: none;
+            color: #777; font-family: 'Bakudai-Regular'; font-size: 18px;
+            box-shadow: inset 2px 2px 0 rgba(255,255,255,0.1), inset -2px -2px 0 rgba(0,0,0,0.6), 4px 4px 5px rgba(0,0,0,0.4);
+        }
+        .d-pad button:active { background: #111; box-shadow: inset 2px 2px 5px rgba(0,0,0,0.8); color: #fff;}
+        .move-up { top: 0; left: 47px; border-radius: 8px 8px 0 0; }
+        .move-left { top: 47px; left: 0; border-radius: 8px 0 0 8px; }
+        .move-right { top: 47px; left: 94px; border-radius: 0 8px 8px 0; }
+        .move-down { top: 94px; left: 47px; border-radius: 0 0 8px 8px; }
+        .d-pad .center-dot {
+            position: absolute; top: 47px; left: 47px;
+            width: 46px; height: 46px; background: var(--btn-dark);
+            box-shadow: inset 2px 2px 0 rgba(255,255,255,0.1);
+        }
+
+        #fontPreload { font-family: 'Bakudai-Regular'; visibility: hidden; position: absolute; }
     </style>
 </head>
 <body>
-    <div id="canvasContainer">
-        <div id="canvas"></div>
+
+    <div id="fontPreload">字型預載</div>
+
+    <div class="header">
+        <h3>GAMEWORKER PIXEL</h3>
+        <div class="tab-container">
+            <button class="tab-btn active" onclick="switchTab('drawTab', this)">繪圖模式</button>
+            <button class="tab-btn" onclick="switchTab('textTab', this)">文字輸入</button>
+        </div>
     </div>
 
-    <div id="tools">
-        <button id="pencil" class="tool active-tool">鉛筆</button>
-        <button id="paintBucket" class="tool">油漆桶</button>
-        <button id="moveCanvas" class="tool">移動畫布</button>
-        <button id="undo" class="tool">上一步</button>
+    <div id="drawTab" class="main-area">
+        <div class="screen-bezel">
+            <div class="power-light"></div>
+            <div id="workspace">
+                <canvas id="gridCanvas" width="100" height="100"></canvas>
+                <canvas id="mainCanvas" width="100" height="100"></canvas>
+                <canvas id="previewCanvas" width="100" height="100"></canvas>
+            </div>
+        </div>
+
+        <div class="bottom-panel">
+            <div id="colorPalette" class="scroll-row"></div>
+            
+            <div class="scroll-row">
+                <button id="pencil" class="tool active-tool" onclick="setTool('pencil')">鉛筆</button>
+                <button id="lineTool" class="tool" onclick="setTool('lineTool')">直線</button>
+                <button id="paintBucket" class="tool" onclick="setTool('paintBucket')">油漆</button>
+                
+                <div class="ab-btn-wrapper" style="margin-left: auto;">
+                    <button id="undo" class="action-btn" onclick="undo()">B</button>
+                    <span>復原</span>
+                </div>
+                <div class="ab-btn-wrapper">
+                    <button id="save" class="action-btn" onclick="saveImage()">A</button>
+                    <span>存PNG</span>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div id="colorPalette"></div>
-    <div id="tools">
-        <input type="file" id="fileInput" accept="image/*">
-        <input type="text" id="fileName" placeholder="輸入檔名">
-        <button id="save" class="tool">存檔</button>
+    <div id="textTab">
+        <div class="cartridge-box">
+            <div class="gb-input-row">
+                <label>輸入字元</label>
+                <input type="text" id="textInput" maxlength="1" value="愛">
+            </div>
+            <div class="gb-input-row">
+                <label>文字大小</label>
+                <input type="number" id="fontSize" value="80">
+            </div>
+            <button class="gb-start-btn" onclick="renderText()">START (生成至畫布)</button>
+        </div>
+
+        <div class="d-pad">
+            <div class="center-dot"></div>
+            <button class="move-up" onclick="moveText(0, -2)">▲</button>
+            <button class="move-left" onclick="moveText(-2, 0)">◀</button>
+            <button class="move-right" onclick="moveText(2, 0)">▶</button>
+            <button class="move-down" onclick="moveText(0, 2)">▼</button>
+        </div>
     </div>
-    
+
     <script>
+        // 設定區
+        const GRID_SIZE = 100;
         const colorMapping = {
-            '0,0,0': '1',
-            '127,127,127': '2',
-            '136,0,21': '3',
-            '237,28,36': '4',
-            '255,127,39': '5',
-            '255,242,0': '6',
-            '34,177,76': '7',
-            '0,162,232': '8',
-            '63,72,204': '9',
-            '163,73,164': '10',
-            '195,195,195': '11',
-            '185,122,87': '12',
-            '255,174,201': '13',
-            '255,201,14': '14',
-            '239,228,176': '15',
-            '181,230,29': '16',
-            '153,217,234': '17',
-            '112,146,190': '18',
-            '200,191,231': '19',
-            '240,135,132': '20'
+            '0,0,0': '1', '127,127,127': '2', '136,0,21': '3', '237,28,36': '4',
+            '255,127,39': '5', '255,242,0': '6', '34,177,76': '7', '0,162,232': '8',
+            '63,72,204': '9', '163,73,164': '10', '195,195,195': '11', '185,122,87': '12',
+            '255,174,201': '13', '255,201,14': '14', '239,228,176': '15', '181,230,29': '16',
+            '153,217,234': '17', '112,146,190': '18', '200,191,231': '19', '240,135,132': '20'
         };
-
         const colors = Object.keys(colorMapping);
         let currentColor = colors[0];
-        let currentTool = 'pencil'; // Default tool
-        let history = []; // For undo functionality
-        let isCanvasMovable = false;
-        let scale = 1;
-        let startDistance = 0;
-        let startTransform = { x: 0, y: 0 };
+        let currentTool = 'pencil';
+        
+        let history = [];
+        let textX = 50, textY = 10;
 
-        const canvas = document.getElementById('canvas');
-        const canvasContainer = document.getElementById('canvasContainer');
-        const colorPalette = document.getElementById('colorPalette');
-        const pencilButton = document.getElementById('pencil');
-        const paintBucketButton = document.getElementById('paintBucket');
-        const moveCanvasButton = document.getElementById('moveCanvas');
-        const undoButton = document.getElementById('undo');
-        const saveButton = document.getElementById('save');
-        const fileNameInput = document.getElementById('fileName');
+        // 畫布相關
+        const workspace = document.getElementById('workspace');
+        const mainCanvas = document.getElementById('mainCanvas');
+        const mainCtx = mainCanvas.getContext('2d', { willReadFrequently: true });
+        const previewCanvas = document.getElementById('previewCanvas');
+        const prevCtx = previewCanvas.getContext('2d');
+        const gridCanvas = document.getElementById('gridCanvas');
+        const gridCtx = gridCanvas.getContext('2d');
 
-        // Initial position
-        canvas.style.left = '0px';
-        canvas.style.top = '0px';
+        let transform = { scale: 1, x: 0, y: 0 };
+        
+        let gestureState = {
+            mode: null,
+            startX: 0, startY: 0,
+            startLeft: null, startRight: null,
+            lastRight: null,
+            baseScale: 1, baseDist: 0
+        };
 
-        // Create canvas
-        let isMouseDown = false;
-        canvas.addEventListener('mousedown', (e) => {
-            if (isCanvasMovable) {
-                isMouseDown = true;
-                canvas.dataset.startX = e.clientX - parseInt(canvas.style.left);
-                canvas.dataset.startY = e.clientY - parseInt(canvas.style.top);
-            } else {
-                isMouseDown = true;
-            }
-        });
-        canvas.addEventListener('mouseup', () => isMouseDown = false);
-        canvas.addEventListener('mouseleave', () => isMouseDown = false);
-        canvas.addEventListener('mousemove', (e) => {
-            if (isCanvasMovable && isMouseDown) {
-                const newLeft = e.clientX - canvas.dataset.startX;
-                const newTop = e.clientY - canvas.dataset.startY;
-                moveCanvasWithinBounds(newLeft, newTop);
-            }
-        });
+        function init() {
+            mainCtx.fillStyle = 'white';
+            mainCtx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
+            saveState();
 
-        canvas.addEventListener('touchstart', (e) => {
-            if (isCanvasMovable && e.touches.length === 1) {
-                isMouseDown = true;
-                const touch = e.touches[0];
-                canvas.dataset.startX = touch.clientX - parseInt(canvas.style.left);
-                canvas.dataset.startY = touch.clientY - parseInt(canvas.style.top);
-                e.preventDefault(); // Prevent scrolling
-            } else if (e.touches.length === 1) {
-                isMouseDown = true;
-                const touch = e.touches[0];
-                const element = document.elementFromPoint(touch.clientX, touch.clientY);
-                if (element && element.classList.contains('pixel') && element.style.backgroundColor !== 'rgb(255, 255, 255)') {
-                    if (currentTool === 'pencil') {
-                        history.push(canvas.innerHTML); // Save state for undo
-                        element.style.backgroundColor = `rgb(${currentColor})`;
-                    } else if (currentTool === 'paintBucket') {
-                        history.push(canvas.innerHTML); // Save state for undo
-                        fill(element, currentColor);
-                        setActiveTool(pencilButton); // Switch back to pencil after using paint bucket
-                    }
-                }
-                e.preventDefault(); // Prevent scrolling
-            } else if (e.touches.length === 2) {
-                startDistance = getDistance(e.touches[0], e.touches[1]);
-                const transform = getTransform();
-                startTransform = { x: transform.x, y: transform.y };
-            }
-        });
-        canvas.addEventListener('touchend', () => isMouseDown = false);
-        canvas.addEventListener('touchmove', (e) => {
-            if (isCanvasMovable && isMouseDown && e.touches.length === 1) {
-                const touch = e.touches[0];
-                const newLeft = touch.clientX - canvas.dataset.startX;
-                const newTop = touch.clientY - canvas.dataset.startY;
-                moveCanvasWithinBounds(newLeft, newTop);
-                e.preventDefault(); // Prevent scrolling
-            } else if (isMouseDown && e.touches.length === 1) {
-                const touch = e.touches[0];
-                const element = document.elementFromPoint(touch.clientX, touch.clientY);
-                if (element && element.classList.contains('pixel') && element.style.backgroundColor !== 'rgb(255, 255, 255)') {
-                    if (currentTool === 'pencil') {
-                        element.style.backgroundColor = `rgb(${currentColor})`;
-                    }
-                }
-                e.preventDefault(); // Prevent scrolling
-            } else if (e.touches.length === 2) {
-                const currentDistance = getDistance(e.touches[0], e.touches[1]);
-                const delta = currentDistance / startDistance;
-                scale *= delta;
-                scale = Math.max(scale, 1); // Minimum scale is 1
-                canvas.style.transform = `scale(${scale})`;
-                updateGridLines(scale);
-                startDistance = currentDistance;
-                e.preventDefault(); // Prevent scrolling
-            }
-        });
-
-        canvasContainer.addEventListener('wheel', (e) => {
-            if (isCanvasMovable) {
-                e.preventDefault();
-                const delta = e.deltaY > 0 ? 0.9 : 1.1;
-                scale *= delta;
-                scale = Math.max(scale, 1); // Minimum scale is 1
-                canvas.style.transform = `scale(${scale})`;
-                updateGridLines(scale);
-                moveCanvasWithinBounds(parseInt(canvas.style.left), parseInt(canvas.style.top));
-            }
-        });
-
-        for (let i = 0; i < 10000; i++) {
-            const pixel = document.createElement('div');
-            pixel.classList.add('pixel');
-            pixel.style.backgroundColor = 'rgb(255, 255, 255)'; // Initial color is white
-            pixel.addEventListener('mousedown', () => {
-                if (currentTool === 'pencil' && pixel.style.backgroundColor !== 'rgb(255, 255, 255)') {
-                    history.push(canvas.innerHTML); // Save state for undo
-                    pixel.style.backgroundColor = `rgb(${currentColor})`;
-                } else if (currentTool === 'paintBucket' && pixel.style.backgroundColor !== 'rgb(255, 255, 255)') {
-                    history.push(canvas.innerHTML); // Save state for undo
-                    fill(pixel, currentColor);
-                    setActiveTool(pencilButton); // Switch back to pencil after using paint bucket
-                }
-            });
-            pixel.addEventListener('mouseover', () => {
-                if (currentTool === 'pencil' && isMouseDown && pixel.style.backgroundColor !== 'rgb(255, 255, 255)') {
-                    pixel.style.backgroundColor = `rgb(${currentColor})`;
-                }
-            });
-            canvas.appendChild(pixel);
-        }
-
-        // Create color palette
-        colors.forEach((color, index) => {
-            const colorBox = document.createElement('div');
-            colorBox.classList.add('color');
-            if (color === currentColor) colorBox.classList.add('selected');
-            colorBox.style.backgroundColor = `rgb(${color})`;
-            colorBox.innerText = colorMapping[color];
-            colorBox.addEventListener('click', () => {
-                document.querySelectorAll('.color').forEach(c => c.classList.remove('selected'));
-                colorBox.classList.add('selected');
-                currentColor = color;
-            });
-            colorPalette.appendChild(colorBox);
-        });
-
-        // Tool selection
-        pencilButton.addEventListener('click', () => {
-            currentTool = 'pencil';
-            setActiveTool(pencilButton);
-            isCanvasMovable = false;
-            moveCanvasButton.classList.remove('active-tool');
-        });
-
-        paintBucketButton.addEventListener('click', () => {
-            currentTool = 'paintBucket';
-            setActiveTool(paintBucketButton);
-            isCanvasMovable = false;
-            moveCanvasButton.classList.remove('active-tool');
-        });
-
-        moveCanvasButton.addEventListener('click', () => {
-            isCanvasMovable = !isCanvasMovable;
-            moveCanvasButton.classList.toggle('active-tool', isCanvasMovable);
-            if (isCanvasMovable) {
-                pencilButton.classList.remove('active-tool');
-                paintBucketButton.classList.remove('active-tool');
-                currentTool = '';
-            }
-        });
-
-        undoButton.addEventListener('click', () => {
-            if (history.length > 0) {
-                canvas.innerHTML = history.pop();
-                undoButton.classList.add('clicked-tool');
-                setTimeout(() => {
-                    undoButton.classList.remove('clicked-tool');
-                }, 200);
-                // Reattach event listeners to pixels
-                const pixels = canvas.getElementsByClassName('pixel');
-                for (let i = 0; i < pixels.length; i++) {
-                    pixels[i].addEventListener('mousedown', pixelMouseDownHandler);
-                    pixels[i].addEventListener('mouseover', pixelMouseOverHandler);
+            gridCtx.fillStyle = 'black';
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    if ((i + j) % 2 === 0) gridCtx.fillRect(i, j, 1, 1);
                 }
             }
-        });
 
-        saveButton.addEventListener('click', saveAsBMP);
-
-        function setActiveTool(button) {
-            document.querySelectorAll('.tool').forEach(tool => tool.classList.remove('active-tool'));
-            button.classList.add('active-tool');
-            currentTool = button.id;
-        }
-
-        function pixelMouseDownHandler() {
-            if (currentTool === 'pencil' && this.style.backgroundColor !== 'rgb(255, 255, 255)') {
-                history.push(canvas.innerHTML); // Save state for undo
-                this.style.backgroundColor = `rgb(${currentColor})`;
-            } else if (currentTool === 'paintBucket' && this.style.backgroundColor !== 'rgb(255, 255, 255)') {
-                history.push(canvas.innerHTML); // Save state for undo
-                fill(this, currentColor);
-                setActiveTool(pencilButton); // Switch back to pencil after using paint bucket
-            }
-        }
-
-        function pixelMouseOverHandler() {
-            if (currentTool === 'pencil' && isMouseDown && this.style.backgroundColor !== 'rgb(255, 255, 255)') {
-                this.style.backgroundColor = `rgb(${currentColor})`;
-            }
-        }
-
-        // Fill function for paint bucket
-        function fill(startPixel, fillColor) {
-            const targetColor = startPixel.style.backgroundColor;
-            const fillColorRGB = `rgb(${fillColor})`;
-            if (targetColor === fillColorRGB) return;
-
-            const pixelsToCheck = [startPixel];
-            const canvasChildren = Array.from(canvas.children);
-
-            while (pixelsToCheck.length > 0) {
-                const pixel = pixelsToCheck.pop();
-                if (pixel.style.backgroundColor === targetColor && targetColor !== 'rgb(255, 255, 255)') {
-                    pixel.style.backgroundColor = fillColorRGB;
-                    const pixelIndex = canvasChildren.indexOf(pixel);
-                    const neighbors = getNeighbors(pixelIndex);
-                    neighbors.forEach(neighbor => {
-                        if (canvasChildren[neighbor] && canvasChildren[neighbor].style.backgroundColor === targetColor) {
-                            pixelsToCheck.push(canvasChildren[neighbor]);
-                        }
-                    });
-                }
-            }
-        }
-
-        // Get neighboring pixels
-        function getNeighbors(index) {
-            const neighbors = [];
-            const row = Math.floor(index / 100);
-            const col = index % 100;
-            if (row > 0) neighbors.push(index - 100); // Top
-            if (row < 99) neighbors.push(index + 100); // Bottom
-            if (col > 0) neighbors.push(index - 1); // Left
-            if (col < 99) neighbors.push(index + 1); // Right
-            return neighbors;
-        }
-
-        // Save as BMP
-        function saveAsBMP() {
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = 100;
-            tempCanvas.height = 100;
-            const ctx = tempCanvas.getContext('2d');
-
-            const pixels = canvas.getElementsByClassName('pixel');
-            for (let i = 0; i < pixels.length; i++) {
-                const pixel = pixels[i];
-                const color = pixel.style.backgroundColor;
-                const rgb = color.match(/\d+/g);
-                ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-                ctx.fillRect((i % 100), Math.floor(i / 100), 1, 1);
-            }
-
-            const fileName = fileNameInput.value || 'canvas';
-            tempCanvas.toBlob(function(blob) {
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `${fileName}.bmp`;
-                link.click();
-            }, 'image/bmp');
-        }
-
-        // Import image for editing
-        const fileInput = document.getElementById('fileInput');
-        fileInput.addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = new Image();
-                    img.onload = function() {
-                        const tempCanvas = document.createElement('canvas');
-                        tempCanvas.width = 100;
-                        tempCanvas.height = 100;
-                        const ctx = tempCanvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, 100, 100);
-                        const imageData = ctx.getImageData(0, 0, 100, 100);
-                        const data = imageData.data;
-                        for (let i = 0; i < 10000; i++) {
-                            const r = data[i * 4];
-                            const g = data[i * 4 + 1];
-                            const b = data[i * 4 + 2];
-                            const pixel = canvas.children[i];
-                            pixel.style.backgroundColor = `rgb(${r},${g},${b})`;
-                        }
-                    };
-                    img.src = e.target.result;
+            const palette = document.getElementById('colorPalette');
+            colors.forEach(color => {
+                const btn = document.createElement('div');
+                btn.className = 'color';
+                if (color === currentColor) btn.classList.add('selected');
+                btn.style.backgroundColor = `rgb(${color})`;
+                btn.innerText = colorMapping[color];
+                btn.onclick = () => {
+                    document.querySelectorAll('.color').forEach(c => c.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    currentColor = color;
                 };
-                reader.readAsDataURL(file);
+                palette.appendChild(btn);
+            });
+
+            workspace.addEventListener('touchstart', handleTouchStart, { passive: false });
+            workspace.addEventListener('touchmove', handleTouchMove, { passive: false });
+            workspace.addEventListener('touchend', handleTouchEnd, { passive: false });
+        }
+
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-content, #textTab').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        function setTool(toolName) {
+            currentTool = toolName;
+            document.querySelectorAll('.tool').forEach(t => t.classList.remove('active-tool'));
+            document.getElementById(toolName).classList.add('active-tool');
+        }
+
+        function getCanvasPos(clientX, clientY) {
+            const rect = workspace.getBoundingClientRect();
+            const x = Math.floor(((clientX - rect.left) / rect.width) * GRID_SIZE);
+            const y = Math.floor(((clientY - rect.top) / rect.height) * GRID_SIZE);
+            return { x, y };
+        }
+
+        function handleTouchStart(e) {
+            e.preventDefault(); 
+            if (e.touches.length === 1) {
+                gestureState.mode = 'draw';
+                const pos = getCanvasPos(e.touches[0].clientX, e.touches[0].clientY);
+                gestureState.startX = pos.x;
+                gestureState.startY = pos.y;
+                
+                if (currentTool === 'pencil') {
+                    saveState();
+                    drawPixel(mainCtx, pos.x, pos.y, currentColor);
+                } else if (currentTool === 'paintBucket') {
+                    saveState();
+                    floodFill(pos.x, pos.y, currentColor);
+                }
+            } else if (e.touches.length === 2) {
+                const t1 = e.touches[0]; const t2 = e.touches[1];
+                const leftT = t1.clientX < t2.clientX ? t1 : t2;
+                const rightT = t1.clientX < t2.clientX ? t2 : t1;
+
+                gestureState.mode = 'detecting'; 
+                gestureState.startLeft = { x: leftT.clientX, y: leftT.clientY };
+                gestureState.startRight = { x: rightT.clientX, y: rightT.clientY };
+                gestureState.lastRight = { x: rightT.clientX, y: rightT.clientY };
+                gestureState.baseScale = transform.scale;
+                gestureState.baseDist = Math.hypot(rightT.clientX - leftT.clientX, rightT.clientY - leftT.clientY);
+                
+                prevCtx.clearRect(0, 0, GRID_SIZE, GRID_SIZE);
             }
-        });
-
-        function getDistance(touch1, touch2) {
-            const dx = touch2.clientX - touch1.clientX;
-            const dy = touch2.clientY - touch1.clientY;
-            return Math.sqrt(dx * dx + dy * dy);
         }
 
-        function getTransform() {
-            const style = window.getComputedStyle(canvas);
-            const matrix = new WebKitCSSMatrix(style.transform);
-            return { x: matrix.m41, y: matrix.m42 };
-        }
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (e.touches.length === 1 && gestureState.mode === 'draw') {
+                const pos = getCanvasPos(e.touches[0].clientX, e.touches[0].clientY);
+                
+                if (currentTool === 'pencil') {
+                    drawLine(mainCtx, gestureState.startX, gestureState.startY, pos.x, pos.y, currentColor);
+                    gestureState.startX = pos.x; gestureState.startY = pos.y;
+                } else if (currentTool === 'lineTool') {
+                    prevCtx.clearRect(0, 0, GRID_SIZE, GRID_SIZE);
+                    drawLine(prevCtx, gestureState.startX, gestureState.startY, pos.x, pos.y, currentColor);
+                }
+            } else if (e.touches.length === 2) {
+                const t1 = e.touches[0]; const t2 = e.touches[1];
+                const leftT = t1.clientX < t2.clientX ? t1 : t2;
+                const rightT = t1.clientX < t2.clientX ? t2 : t1;
 
-        function moveCanvasWithinBounds(newLeft, newTop) {
-            const maxLeft = 0;
-            const maxRight = canvasContainer.clientWidth - canvas.clientWidth * scale;
-            const maxTop = 0;
-            const maxBottom = canvasContainer.clientHeight - canvas.clientHeight * scale;
-            canvas.style.left = `${Math.max(maxRight, Math.min(maxLeft, newLeft))}px`;
-            canvas.style.top = `${Math.max(maxBottom, Math.min(maxTop, newTop))}px`;
-        }
+                if (gestureState.mode === 'detecting') {
+                    const leftMove = Math.hypot(leftT.clientX - gestureState.startLeft.x, leftT.clientY - gestureState.startLeft.y);
+                    const rightMove = Math.hypot(rightT.clientX - gestureState.startRight.x, rightT.clientY - gestureState.startRight.y);
 
-        function updateGridLines(scale) {
-            const pixels = canvas.getElementsByClassName('pixel');
-            for (let i = 0; i < pixels.length; i++) {
-                if (Math.round(scale) === scale) { // Check if scale is an integer
-                    pixels[i].classList.add('with-grid');
-                } else {
-                    pixels[i].classList.remove('with-grid');
+                    if (rightMove > 5 && leftMove <= 5) gestureState.mode = 'pan'; 
+                    else if (leftMove > 5 && rightMove <= 5) gestureState.mode = 'zoom';
+                }
+
+                if (gestureState.mode === 'pan') {
+                    transform.x += rightT.clientX - gestureState.lastRight.x;
+                    transform.y += rightT.clientY - gestureState.lastRight.y;
+                    gestureState.lastRight = { x: rightT.clientX, y: rightT.clientY };
+                    applyTransform();
+                } else if (gestureState.mode === 'zoom') {
+                    const currentDist = Math.hypot(rightT.clientX - leftT.clientX, rightT.clientY - leftT.clientY);
+                    let newScale = gestureState.baseScale * (currentDist / gestureState.baseDist);
+                    transform.scale = Math.max(0.5, Math.min(newScale, 10)); 
+                    applyTransform();
                 }
             }
         }
+
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            if (gestureState.mode === 'draw' && currentTool === 'lineTool') {
+                if (e.changedTouches.length > 0) {
+                    saveState();
+                    const pos = getCanvasPos(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+                    prevCtx.clearRect(0, 0, GRID_SIZE, GRID_SIZE);
+                    drawLine(mainCtx, gestureState.startX, gestureState.startY, pos.x, pos.y, currentColor);
+                }
+            }
+            if (e.touches.length === 0) gestureState.mode = null;
+        }
+
+        function applyTransform() {
+            workspace.style.transform = `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`;
+        }
+
+        function drawPixel(ctx, x, y, colorStr) {
+            if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) return;
+            ctx.fillStyle = `rgb(${colorStr})`; ctx.fillRect(x, y, 1, 1);
+        }
+
+        function drawLine(ctx, x0, y0, x1, y1, colorStr) {
+            ctx.fillStyle = `rgb(${colorStr})`;
+            let dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+            let dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+            let err = dx + dy, e2;
+
+            while (true) {
+                ctx.fillRect(x0, y0, 1, 1);
+                if (x0 === x1 && y0 === y1) break;
+                e2 = 2 * err;
+                if (e2 >= dy) { err += dy; x0 += sx; }
+                if (e2 <= dx) { err += dx; y0 += sy; }
+            }
+        }
+
+        function floodFill(startX, startY, fillRGBStr) {
+            const imgData = mainCtx.getImageData(0, 0, GRID_SIZE, GRID_SIZE);
+            const data = imgData.data;
+            const targetColor = getPixelColor(data, startX, startY);
+            const [fr, fg, fb] = fillRGBStr.split(',').map(Number);
+            
+            if (targetColor.r === fr && targetColor.g === fg && targetColor.b === fb) return;
+
+            const stack = [[startX, startY]];
+            while (stack.length > 0) {
+                const [x, y] = stack.pop();
+                const pos = (y * GRID_SIZE + x) * 4;
+
+                if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) continue;
+                if (data[pos] !== targetColor.r || data[pos+1] !== targetColor.g || data[pos+2] !== targetColor.b) continue;
+
+                data[pos] = fr; data[pos+1] = fg; data[pos+2] = fb; data[pos+3] = 255;
+                stack.push([x+1, y], [x-1, y], [x, y+1], [x, y-1]);
+            }
+            mainCtx.putImageData(imgData, 0, 0);
+        }
+
+        function getPixelColor(data, x, y) {
+            const pos = (y * GRID_SIZE + x) * 4;
+            return { r: data[pos], g: data[pos+1], b: data[pos+2] };
+        }
+
+        function saveState() {
+            history.push(mainCtx.getImageData(0, 0, GRID_SIZE, GRID_SIZE));
+            if (history.length > 20) history.shift();
+        }
+        function undo() {
+            if (history.length > 0) {
+                const lastState = history.pop();
+                mainCtx.putImageData(lastState, 0, 0);
+            }
+        }
+
+        function renderText() {
+            saveState();
+            const text = document.getElementById('textInput').value;
+            const size = document.getElementById('fontSize').value;
+            
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = GRID_SIZE; tempCanvas.height = GRID_SIZE;
+            const tCtx = tempCanvas.getContext('2d');
+            
+            tCtx.fillStyle = 'white'; tCtx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
+            tCtx.font = `${size}px 'Bakudai-Regular', sans-serif`;
+            tCtx.fillStyle = 'black';
+            tCtx.textAlign = 'center'; tCtx.textBaseline = 'top';
+            tCtx.fillText(text, textX, textY);
+
+            const imgData = tCtx.getImageData(0, 0, GRID_SIZE, GRID_SIZE);
+            for(let i=0; i<imgData.data.length; i+=4) {
+                if (imgData.data[i] < 200) {
+                    imgData.data[i] = 0; imgData.data[i+1] = 0; imgData.data[i+2] = 0;
+                }
+            }
+            mainCtx.putImageData(imgData, 0, 0);
+            switchTab('drawTab', document.querySelector('.tab-btn'));
+        }
+
+        function moveText(dx, dy) {
+            textX += dx; textY += dy;
+            renderText();
+            switchTab('textTab', document.querySelectorAll('.tab-btn')[1]);
+        }
+
+        function saveImage() {
+            const link = document.createElement('a');
+            link.download = 'pixel_art.png';
+            link.href = mainCanvas.toDataURL('image/png');
+            link.click();
+        }
+
+        window.onload = () => {
+            init();
+            document.fonts.ready.then(() => renderText());
+        };
     </script>
 </body>
 </html>
