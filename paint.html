@@ -81,7 +81,7 @@
             pointer-events: none;
             border-radius: 4px;
         }
-        #gridCanvas { opacity: 0.1; z-index: 1; }
+        #gridCanvas { opacity: 0.15; z-index: 1; transition: opacity 0.2s; }
         #mainCanvas { z-index: 2; }
         #previewCanvas { z-index: 3; }
 
@@ -127,10 +127,13 @@
             border-radius: 20px; font-size: 14px; font-weight: 500;
             display: flex; align-items: center; gap: 6px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: 0.2s;
         }
         .tool.active-tool { background: var(--primary); color: #FFF; }
-        .tool-action { background: rgba(255,255,255,0.1); }
+        .tool-action { background: rgba(255,255,255,0.15); }
         .tool-save { background: var(--success); color: #000; font-weight: bold;}
+        .tool.disabled-look { opacity: 0.5; background: transparent; border: 1px solid rgba(255,255,255,0.2); }
 
         /* --- 文字生成面板 --- */
         #textTab {
@@ -160,6 +163,7 @@
             background: var(--primary); color: white; border: none;
             padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 600;
             margin-top: 10px; box-shadow: 0 4px 15px rgba(10, 132, 255, 0.4);
+            cursor: pointer;
         }
 
         /* 現代方向鍵設計 */
@@ -208,6 +212,7 @@
                 <div id="lineTool" class="tool" onclick="setTool('lineTool')">📏 直線</div>
                 <div id="paintBucket" class="tool" onclick="setTool('paintBucket')">🪣 填色</div>
                 <div style="flex: 1;"></div>
+                <div id="gridToggleBtn" class="tool tool-action" onclick="toggleGrid()">▦ 網格</div>
                 <div class="tool tool-action" onclick="undo()">↩ 復原</div>
                 <div class="tool tool-save" onclick="saveImage()">⬇ 匯出</div>
             </div>
@@ -309,8 +314,20 @@
 
         function setTool(toolName) {
             currentTool = toolName;
-            document.querySelectorAll('.tool').forEach(t => t.classList.remove('active-tool'));
+            document.querySelectorAll('#pencil, #lineTool, #paintBucket').forEach(t => t.classList.remove('active-tool'));
             document.getElementById(toolName).classList.add('active-tool');
+        }
+
+        // 網格開關邏輯
+        function toggleGrid() {
+            const btn = document.getElementById('gridToggleBtn');
+            if (gridCanvas.style.opacity === '0' || gridCanvas.style.opacity === 0) {
+                gridCanvas.style.opacity = '0.15'; // 恢復顯示
+                btn.classList.remove('disabled-look');
+            } else {
+                gridCanvas.style.opacity = '0'; // 隱藏
+                btn.classList.add('disabled-look');
+            }
         }
 
         function getCanvasPos(clientX, clientY) {
@@ -407,7 +424,7 @@
 
         // 畫點 (加入白底鎖定檢查)
         function drawPixel(ctx, x, y, colorStr) {
-            if (!canDraw(x, y)) return; // 遇到白底(鎖定區)直接阻擋
+            if (ctx === mainCtx && !canDraw(x, y)) return; // 遇到白底(鎖定區)直接阻擋 (預覽圖層不擋)
             ctx.fillStyle = `rgb(${colorStr})`; ctx.fillRect(x, y, 1, 1);
         }
 
@@ -419,7 +436,9 @@
             let err = dx + dy, e2;
 
             while (true) {
-                if (canDraw(x0, y0)) ctx.fillRect(x0, y0, 1, 1);
+                if (ctx !== mainCtx || canDraw(x0, y0)) {
+                    ctx.fillRect(x0, y0, 1, 1);
+                }
                 if (x0 === x1 && y0 === y1) break;
                 e2 = 2 * err;
                 if (e2 >= dy) { err += dy; x0 += sx; }
@@ -484,15 +503,25 @@
 
             const imgData = tCtx.getImageData(0, 0, GRID_SIZE, GRID_SIZE);
             
-            // 更新畫布並設定白底鎖定遮罩 (lockedMask)
+            // 更新畫布並設定白底鎖定遮罩，同時強制純黑覆寫
             for(let i=0; i<imgData.data.length; i+=4) {
-                const isWhite = imgData.data[i] >= 200;
-                lockedMask[i/4] = isWhite; // 標記為 true (不可畫) 或 false (可畫)
+                // 如果是半透明邊緣或原本的白色，都判定：
+                const r = imgData.data[i];
+                const alpha = imgData.data[i+3];
+                const isWhite = (alpha < 128) || (r >= 200); 
+
+                lockedMask[i/4] = isWhite; // 標記為 true(不可畫) 或 false(可畫)
                 
                 if (isWhite) {
-                    imgData.data[i] = 255; imgData.data[i+1] = 255; imgData.data[i+2] = 255;
+                    imgData.data[i] = 255;   // R
+                    imgData.data[i+1] = 255; // G
+                    imgData.data[i+2] = 255; // B
+                    imgData.data[i+3] = 255; // Alpha (純白)
                 } else {
-                    imgData.data[i] = 0; imgData.data[i+1] = 0; imgData.data[i+2] = 0;
+                    imgData.data[i] = 0;     // R
+                    imgData.data[i+1] = 0;   // G
+                    imgData.data[i+2] = 0;   // B
+                    imgData.data[i+3] = 255; // Alpha (純黑，杜絕半透明)
                 }
             }
             mainCtx.putImageData(imgData, 0, 0);
