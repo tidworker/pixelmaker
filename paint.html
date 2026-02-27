@@ -11,6 +11,7 @@
         }
         
         :root {
+            /* 黑灰專業配色系統 */
             --bg-dark: #0A0A0A;
             --surface: #1A1A1A;
             --surface-light: #2A2A2A;
@@ -18,9 +19,9 @@
             --primary: #4A4A4A;
             --primary-active: #6A6A6A;
             --text-main: #FFFFFF;
-            --text-muted: #999999;
+            --text-muted: #777777; /* 更深的灰色作為完成標記 */
             --border-color: #333333;
-            --success: #6A9A6A;
+            --success: #5A7A5A;
         }
 
         body, html {
@@ -145,7 +146,7 @@
         .tool-save { background: #FFFFFF; color: #000000; }
         .tool.disabled-look { opacity: 0.4; background: var(--bg-dark); }
 
-        /* --- 文字生成面板 --- */
+        /* --- 文字排版面板 --- */
         #textTab {
             background: var(--bg-dark);
             align-items: center; 
@@ -173,17 +174,41 @@
             border-radius: 0; padding: 20px; border: 1px solid var(--border-color);
             display: flex; flex-direction: column; gap: 15px; margin-bottom: 0;
         }
+        
+        /* 文本系統軌道 (Ribbon UI) */
+        .seq-ribbon-container {
+            width: 100%; height: 50px;
+            background: var(--surface-light); border: 1px solid var(--border-color);
+            position: relative; overflow: hidden; cursor: pointer;
+            box-sizing: border-box; margin-bottom: 5px;
+        }
+        .seq-ribbon-container:active { background: var(--surface-hover); }
+        .seq-track {
+            display: flex; align-items: center; height: 100%;
+            position: absolute; left: 50%; transition: transform 0.2s ease-out;
+            white-space: nowrap;
+        }
+        .seq-char {
+            font-size: 20px; padding: 0 10px; color: var(--text-main);
+            font-weight: normal; user-select: none; transition: 0.2s;
+        }
+        .seq-char.done { color: var(--text-muted); } /* 完成文字變灰色 */
+        .seq-char.active {
+            border: 2px solid var(--text-main); font-weight: bold;
+            padding: 2px 8px; /* 扣掉邊框的空間 */
+        }
+
         .form-row { display: flex; justify-content: space-between; align-items: center; }
         .form-row label { font-size: 15px; color: var(--text-muted); font-weight: bold;}
         
-        .form-row input[type="text"], .form-row input[type="number"], .full-input {
+        .form-row input[type="text"], .form-row input[type="number"] {
             background: var(--surface-light); color: var(--text-main);
             border: 1px solid var(--border-color); border-radius: 0; padding: 10px;
             font-size: 16px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            transition: 0.2s;
         }
-        .form-row input[type="text"]:focus, .form-row input[type="number"]:focus, .full-input:focus { outline: 1px solid var(--text-muted); }
+        .form-row input[type="text"]:focus, .form-row input[type="number"]:focus { outline: 1px solid var(--text-muted); }
         .short-input { text-align: center; width: 80px; }
-        .full-input { width: 100%; box-sizing: border-box; text-align: left; margin-bottom: 5px; }
         
         .btn-generate {
             background: var(--primary); color: white; border: none;
@@ -192,7 +217,6 @@
         }
         .btn-generate:active { background: var(--primary-active); }
 
-        /* 文本系統專用導航與開關 */
         .sequence-nav { display: flex; justify-content: space-between; align-items: center; }
         .nav-btn {
             background: var(--surface-light); color: var(--text-main);
@@ -208,6 +232,32 @@
         .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: var(--text-muted); transition: .2s; }
         input:checked + .slider { background-color: var(--success); border-color: var(--success); }
         input:checked + .slider:before { transform: translateX(20px); background-color: black; }
+
+        /* --- 模態框 (Modal) --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 100;
+            display: none; justify-content: center; align-items: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: var(--surface); width: 85%; max-width: 400px;
+            padding: 20px; border: 1px solid var(--border-color);
+            display: flex; flex-direction: column; gap: 15px;
+        }
+        .modal-content h3 { margin: 0; font-size: 16px; color: var(--text-main); }
+        .modal-content textarea {
+            background: var(--surface-light); color: var(--text-main);
+            border: 1px solid var(--border-color); padding: 12px;
+            font-size: 16px; font-family: sans-serif; resize: none; border-radius: 0;
+        }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+        .modal-actions button {
+            background: var(--surface-light); color: var(--text-main);
+            border: 1px solid var(--border-color); padding: 10px 20px;
+            font-weight: bold; cursor: pointer; border-radius: 0;
+        }
+        .modal-actions button.primary { background: var(--primary); }
 
         #fontPreload { font-family: 'Bakudai-Regular'; visibility: hidden; position: absolute; }
     </style>
@@ -242,7 +292,7 @@
                 <div style="flex: 1;"></div>
                 <div id="gridToggleBtn" class="tool tool-action" onclick="toggleGrid()">網格</div>
                 <div class="tool tool-action" onclick="undo()">復原</div>
-                <div class="tool tool-save" onclick="saveImage()">匯出</div>
+                <div class="tool tool-save" onclick="saveImage()">下載</div>
             </div>
         </div>
     </div>
@@ -252,13 +302,16 @@
             <div class="preview-container">
                 <canvas id="textPreviewCanvas" width="100" height="100"></canvas>
             </div>
-            <div class="hint-text">在畫面上單指滑動，調整文字位置</div>
+            <div class="hint-text">在畫面上單指滑動，精確調整文字位置</div>
         </div>
 
         <div class="form-group">
             <div>
-                <label style="font-size: 15px; color: var(--text-muted); font-weight: bold; margin-bottom: 8px; display: block;">文本系統</label>
-                <input type="text" id="sequenceInput" class="full-input" placeholder="請輸入一串連續文字" oninput="initSequence()">
+                <label style="font-size: 15px; color: var(--text-muted); font-weight: bold; margin-bottom: 8px; display: block;">文本系統 (點擊展開編輯)</label>
+                <div class="seq-ribbon-container" onclick="openSeqModal()">
+                    <div id="seqTrack" class="seq-track">
+                        </div>
+                </div>
             </div>
             
             <div class="sequence-nav">
@@ -268,7 +321,7 @@
             </div>
 
             <div class="form-row">
-                <label>目前字元</label>
+                <label>目前編輯</label>
                 <input type="text" id="textInput" class="short-input" maxlength="1" value="愛" oninput="manualCharChange()">
             </div>
 
@@ -282,9 +335,20 @@
 
             <div class="form-row">
                 <label>文字大小</label>
-                <input type="number" id="fontSize" class="short-input" value="80" oninput="previewText()">
+                <input type="number" id="fontSize" class="short-input" value="100" oninput="previewText()">
             </div>
-            <button class="btn-generate" onclick="applyText()">套用並返回</button>
+            <button class="btn-generate" onclick="applyText()">寫入畫布並進入下一字</button>
+        </div>
+    </div>
+
+    <div id="textModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>編輯全部文本</h3>
+            <textarea id="modalTextarea" rows="4" placeholder="請在此輸入要排版的句子..."></textarea>
+            <div class="modal-actions">
+                <button onclick="closeSeqModal()">取消</button>
+                <button class="primary" onclick="saveSeqModal()">確認變更</button>
+            </div>
         </div>
     </div>
 
@@ -321,24 +385,18 @@
         const textPreviewCtx = textPreviewCanvas.getContext('2d', { willReadFrequently: true });
 
         let transform = { scale: 1, x: 0, y: 0 };
-        
         let panZoomCooldown = false;
         let cooldownTimer = null;
 
         let gestureState = { 
-            mode: null, 
-            startX: 0, startY: 0,
-            touchStartX: 0, touchStartY: 0,
-            pinchStartDist: 0, 
-            pinchStartCenter: {x: 0, y: 0},
-            panStartOrigin: {x: 0, y: 0},
-            scaleStart: 1
+            mode: null, startX: 0, startY: 0, touchStartX: 0, touchStartY: 0,
+            pinchStartDist: 0, pinchStartCenter: {x: 0, y: 0},
+            panStartOrigin: {x: 0, y: 0}, scaleStart: 1
         };
 
         let lastTapTime = 0;
         let longPressTimer = null;
         let toolBeforeLongPress = null;
-
         let textDrag = { active: false, startX: 0, startY: 0, initialTextX: 50, initialTextY: 10 };
 
         function init() {
@@ -372,41 +430,88 @@
             workspace.addEventListener('touchmove', handleTouchMove, { passive: false });
             workspace.addEventListener('touchend', handleTouchEnd, { passive: false });
 
+            document.getElementById('textInput').addEventListener('input', manualCharChange);
+            document.getElementById('fontSize').addEventListener('input', previewText);
+
             textPreviewCanvas.addEventListener('touchstart', handleTextTouchStart, { passive: false });
             textPreviewCanvas.addEventListener('touchmove', handleTextTouchMove, { passive: false });
             textPreviewCanvas.addEventListener('touchend', handleTextTouchEnd, { passive: false });
+
+            updateSeqUI(); // 初始化空軌道
         }
 
-        /* --- 文本系統邏輯 --- */
-        function initSequence() {
-            const str = document.getElementById('sequenceInput').value;
+        /* --- 模態框與文本軌道邏輯 --- */
+        function openSeqModal() {
+            document.getElementById('modalTextarea').value = seqData.map(d => d.char).join('');
+            document.getElementById('textModal').classList.add('active');
+        }
+
+        function closeSeqModal() {
+            document.getElementById('textModal').classList.remove('active');
+        }
+
+        function saveSeqModal() {
+            const str = document.getElementById('modalTextarea').value;
             if (!str) {
-                seqData = []; updateSeqUI(); return;
+                seqData = []; seqIndex = 0;
+                document.getElementById('textInput').value = '';
+            } else {
+                const newSeq = [];
+                for (let i = 0; i < str.length; i++) {
+                    const oldDone = (seqData[i] && seqData[i].char === str[i]) ? seqData[i].done : false;
+                    newSeq.push({ char: str[i], done: oldDone });
+                }
+                seqData = newSeq;
+                if (seqIndex >= seqData.length) seqIndex = Math.max(0, seqData.length - 1);
             }
-            const newSeq = Array.from(str).map(char => {
-                const existing = seqData.find(item => item.char === char);
-                return { char: char, done: existing ? existing.done : false };
-            });
-            seqData = newSeq;
-            if (seqIndex >= seqData.length) seqIndex = Math.max(0, seqData.length - 1);
             updateSeqUI();
+            closeSeqModal();
         }
 
         function updateSeqUI() {
+            const track = document.getElementById('seqTrack');
+            track.innerHTML = '';
+
             if (seqData.length === 0) {
                 document.getElementById('seqStatus').innerText = '- / -';
+                const el = document.createElement('div');
+                el.className = 'seq-char';
+                el.innerText = '尚未輸入內容';
+                track.appendChild(el);
+                track.style.transform = `translateX(-50%)`;
                 return;
             }
+
+            seqData.forEach((item, idx) => {
+                const el = document.createElement('div');
+                el.className = 'seq-char';
+                if (item.done) el.classList.add('done');
+                if (idx === seqIndex) el.classList.add('active');
+                el.innerText = item.char;
+                track.appendChild(el);
+            });
+
+            // 動態置中目前的字元
+            setTimeout(() => {
+                const activeEl = track.children[seqIndex];
+                if (activeEl) {
+                    const offsetLeft = activeEl.offsetLeft;
+                    const width = activeEl.offsetWidth;
+                    // translateX( - (元素在track內的起點 + 元素寬度的一半) ) = 置中對齊
+                    track.style.transform = `translateX(calc(-${offsetLeft + width / 2}px))`;
+                }
+            }, 10);
+
             const current = seqData[seqIndex];
             document.getElementById('seqStatus').innerText = `${seqIndex + 1} / ${seqData.length}`;
             document.getElementById('textInput').value = current.char;
             document.getElementById('doneSwitch').checked = current.done;
 
-            // 若標記完成，將顯示框變成淺灰色
+            // 輸入欄的防呆樣式同步
             const txtInput = document.getElementById('textInput');
             if (current.done) {
-                txtInput.style.backgroundColor = '#CCCCCC';
-                txtInput.style.color = '#000000';
+                txtInput.style.backgroundColor = 'var(--surface)';
+                txtInput.style.color = 'var(--text-muted)';
             } else {
                 txtInput.style.backgroundColor = 'var(--surface-light)';
                 txtInput.style.color = 'var(--text-main)';
@@ -414,30 +519,27 @@
             previewText();
         }
 
-        function nextChar() {
-            if (seqIndex < seqData.length - 1) { seqIndex++; updateSeqUI(); }
-        }
-        function prevChar() {
-            if (seqIndex > 0) { seqIndex--; updateSeqUI(); }
-        }
+        function nextChar() { if (seqIndex < seqData.length - 1) { seqIndex++; updateSeqUI(); } }
+        function prevChar() { if (seqIndex > 0) { seqIndex--; updateSeqUI(); } }
         function toggleDone() {
-            if (seqData.length > 0) {
-                seqData[seqIndex].done = document.getElementById('doneSwitch').checked;
-                updateSeqUI();
-            }
+            if (seqData.length > 0) { seqData[seqIndex].done = document.getElementById('doneSwitch').checked; updateSeqUI(); }
         }
         function manualCharChange() {
-            if (seqData.length > 0) {
-                seqData[seqIndex].char = document.getElementById('textInput').value;
+            const val = document.getElementById('textInput').value;
+            if (seqData.length > 0 && val) {
+                seqData[seqIndex].char = val;
+                updateSeqUI();
+            } else {
+                previewText();
             }
-            previewText();
         }
 
-        /* --- 系統切換 --- */
         function switchTab(tabId, btn) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.segment-btn').forEach(el => el.classList.remove('active'));
-            if(tabId === 'textTab') { previewText(); }
+            if(tabId === 'textTab') {
+                setTimeout(() => updateSeqUI(), 50); // 切換回來重新排版置中
+            }
             document.getElementById(tabId).classList.add('active');
             btn.classList.add('active');
         }
@@ -469,7 +571,7 @@
             return !lockedMask[y * GRID_SIZE + x];
         }
 
-        /* --- 手勢互動邏輯 --- */
+        /* --- 手勢防誤觸核心邏輯 --- */
         function handleTouchStart(e) {
             e.preventDefault(); 
             
@@ -479,39 +581,26 @@
                 const now = Date.now();
                 const pos = getCanvasPos(e.touches[0].clientX, e.touches[0].clientY);
 
-                // 判斷雙擊 (Double Tap)
+                // 判斷雙擊 (Double Tap)：若是白色觸發復原，若是彩色觸發油漆桶
                 if (now - lastTapTime < 300) {
                     clearTimeout(longPressTimer);
-                    
                     const imgData = mainCtx.getImageData(0, 0, GRID_SIZE, GRID_SIZE);
                     const targetColor = getPixelColor(imgData.data, pos.x, pos.y);
                     const isWhite = targetColor.r >= 200 && targetColor.g >= 200 && targetColor.b >= 200;
 
-                    if (isWhite) {
-                        undo(); // 連點白色觸發復原
-                    } else {
-                        saveState(); // 連點顏色區域保留油漆桶功能
-                        floodFill(pos.x, pos.y, currentColor);
-                    }
-
-                    lastTapTime = 0; 
-                    gestureState.mode = 'ignore'; 
-                    return;
+                    if (isWhite) { undo(); } 
+                    else { saveState(); floodFill(pos.x, pos.y, currentColor); }
+                    lastTapTime = 0; gestureState.mode = 'ignore'; return;
                 }
                 lastTapTime = now;
 
                 gestureState.mode = 'draw';
-                gestureState.startX = pos.x; 
-                gestureState.startY = pos.y;
-                gestureState.touchStartX = e.touches[0].clientX;
-                gestureState.touchStartY = e.touches[0].clientY;
+                gestureState.startX = pos.x; gestureState.startY = pos.y;
+                gestureState.touchStartX = e.touches[0].clientX; gestureState.touchStartY = e.touches[0].clientY;
                 toolBeforeLongPress = currentTool;
                 
-                if (currentTool === 'pencil') {
-                    saveState(); drawPixel(mainCtx, pos.x, pos.y, currentColor);
-                } else if (currentTool === 'paintBucket') {
-                    saveState(); floodFill(pos.x, pos.y, currentColor);
-                }
+                if (currentTool === 'pencil') { saveState(); drawPixel(mainCtx, pos.x, pos.y, currentColor); } 
+                else if (currentTool === 'paintBucket') { saveState(); floodFill(pos.x, pos.y, currentColor); }
 
                 longPressTimer = setTimeout(() => {
                     if (gestureState.mode === 'draw') {
@@ -522,31 +611,26 @@
                     }
                 }, 400);
 
-            // 雙指分離偵測模式 (防同時移動縮放)
             } else if (e.touches.length === 2) {
                 clearTimeout(longPressTimer);
                 gestureState.mode = 'panzoom-detect'; 
-                
                 const t1 = e.touches[0]; const t2 = e.touches[1];
                 const cx = (t1.clientX + t2.clientX) / 2;
                 const cy = (t1.clientY + t2.clientY) / 2;
                 const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
-
+                
                 gestureState.pinchStartCenter = { x: cx, y: cy };
                 gestureState.pinchStartDist = dist;
                 gestureState.panStartOrigin = { x: transform.x, y: transform.y };
                 gestureState.scaleStart = transform.scale;
-                
                 prevCtx.clearRect(0, 0, GRID_SIZE, GRID_SIZE);
             }
         }
 
         function handleTouchMove(e) {
             e.preventDefault();
-            
             if (e.touches.length === 1 && gestureState.mode === 'draw') {
                 if (panZoomCooldown) return;
-
                 const dxMove = Math.abs(e.touches[0].clientX - gestureState.touchStartX);
                 const dyMove = Math.abs(e.touches[0].clientY - gestureState.touchStartY);
                 if (dxMove > 5 || dyMove > 5) clearTimeout(longPressTimer);
@@ -559,30 +643,26 @@
                     prevCtx.clearRect(0, 0, GRID_SIZE, GRID_SIZE);
                     drawLine(prevCtx, gestureState.startX, gestureState.startY, pos.x, pos.y, currentColor);
                 }
-
-            // 判斷並鎖定純移動或純縮放
             } else if (e.touches.length === 2) {
                 const t1 = e.touches[0]; const t2 = e.touches[1];
                 const cx = (t1.clientX + t2.clientX) / 2;
                 const cy = (t1.clientY + t2.clientY) / 2;
                 const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
 
+                // 互斥鎖定系統：一旦判定為某種手勢，不再變換
                 if (gestureState.mode === 'panzoom-detect') {
                     const distChange = Math.abs(dist - gestureState.pinchStartDist);
                     const panChange = Math.hypot(cx - gestureState.pinchStartCenter.x, cy - gestureState.pinchStartCenter.y);
                     if (distChange > 15) gestureState.mode = 'zoom';
                     else if (panChange > 15) gestureState.mode = 'pan';
                 }
-
+                
                 if (gestureState.mode === 'zoom') {
                     let newScale = gestureState.scaleStart * (dist / gestureState.pinchStartDist);
-                    transform.scale = Math.max(0.5, Math.min(newScale, 10)); 
-                    applyTransform();
+                    transform.scale = Math.max(0.5, Math.min(newScale, 10)); applyTransform();
                 } else if (gestureState.mode === 'pan') {
-                    const dxPan = cx - gestureState.pinchStartCenter.x;
-                    const dyPan = cy - gestureState.pinchStartCenter.y;
-                    transform.x = gestureState.panStartOrigin.x + dxPan;
-                    transform.y = gestureState.panStartOrigin.y + dyPan;
+                    transform.x = gestureState.panStartOrigin.x + (cx - gestureState.pinchStartCenter.x);
+                    transform.y = gestureState.panStartOrigin.y + (cy - gestureState.pinchStartCenter.y);
                     applyTransform();
                 }
             }
@@ -591,218 +671,108 @@
         function handleTouchEnd(e) {
             e.preventDefault();
             clearTimeout(longPressTimer);
-
-            // 防誤觸冷卻鎖定 (0.5秒)
             if ((gestureState.mode === 'zoom' || gestureState.mode === 'pan' || gestureState.mode === 'panzoom-detect') && e.touches.length < 2) {
-                panZoomCooldown = true;
-                clearTimeout(cooldownTimer);
+                panZoomCooldown = true; clearTimeout(cooldownTimer);
                 cooldownTimer = setTimeout(() => { panZoomCooldown = false; }, 500);
                 if (e.touches.length > 0) gestureState.mode = 'ignore'; 
             }
-
-            if (gestureState.mode === 'draw' && currentTool === 'lineTool' && e.changedTouches.length > 0) {
-                if (!panZoomCooldown) {
-                    saveState();
-                    const pos = getCanvasPos(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-                    prevCtx.clearRect(0, 0, GRID_SIZE, GRID_SIZE);
-                    drawLine(mainCtx, gestureState.startX, gestureState.startY, pos.x, pos.y, currentColor);
-                }
+            if (gestureState.mode === 'draw' && currentTool === 'lineTool' && e.changedTouches.length > 0 && !panZoomCooldown) {
+                saveState();
+                const pos = getCanvasPos(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+                prevCtx.clearRect(0, 0, GRID_SIZE, GRID_SIZE);
+                drawLine(mainCtx, gestureState.startX, gestureState.startY, pos.x, pos.y, currentColor);
             }
-
-            if (e.touches.length === 0) {
-                if (gestureState.mode !== 'ignore' || panZoomCooldown === false) gestureState.mode = null;
-            }
+            if (e.touches.length === 0 && (gestureState.mode !== 'ignore' || panZoomCooldown === false)) gestureState.mode = null;
         }
 
-        function applyTransform() {
-            workspace.style.transform = `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`;
-        }
-
-        function drawPixel(ctx, x, y, colorStr) {
-            if (ctx === mainCtx && !canDraw(x, y)) return; 
-            ctx.fillStyle = `rgb(${colorStr})`; ctx.fillRect(x, y, 1, 1);
-        }
-
+        function applyTransform() { workspace.style.transform = `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`; }
+        function drawPixel(ctx, x, y, colorStr) { if (ctx === mainCtx && !canDraw(x, y)) return; ctx.fillStyle = `rgb(${colorStr})`; ctx.fillRect(x, y, 1, 1); }
         function drawLine(ctx, x0, y0, x1, y1, colorStr) {
             ctx.fillStyle = `rgb(${colorStr})`;
-            let dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
-            let dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
-            let err = dx + dy, e2;
+            let dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1, dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1, err = dx + dy, e2;
             while (true) {
                 if (ctx !== mainCtx || canDraw(x0, y0)) ctx.fillRect(x0, y0, 1, 1);
-                if (x0 === x1 && y0 === y1) break;
-                e2 = 2 * err;
-                if (e2 >= dy) { err += dy; x0 += sx; }
-                if (e2 <= dx) { err += dx; y0 += sy; }
+                if (x0 === x1 && y0 === y1) break; e2 = 2 * err;
+                if (e2 >= dy) { err += dy; x0 += sx; } if (e2 <= dx) { err += dx; y0 += sy; }
             }
         }
-
         function floodFill(startX, startY, fillRGBStr) {
             if (!canDraw(startX, startY)) return; 
-
-            const imgData = mainCtx.getImageData(0, 0, GRID_SIZE, GRID_SIZE);
-            const data = imgData.data;
-            const targetColor = getPixelColor(data, startX, startY);
-            const [fr, fg, fb] = fillRGBStr.split(',').map(Number);
+            const imgData = mainCtx.getImageData(0, 0, GRID_SIZE, GRID_SIZE), data = imgData.data;
+            const targetColor = getPixelColor(data, startX, startY), [fr, fg, fb] = fillRGBStr.split(',').map(Number);
             if (targetColor.r === fr && targetColor.g === fg && targetColor.b === fb) return;
-
             const stack = [[startX, startY]];
             while (stack.length > 0) {
-                const [x, y] = stack.pop();
-                const pos = (y * GRID_SIZE + x) * 4;
-                if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) continue;
-                if (data[pos] !== targetColor.r || data[pos+1] !== targetColor.g || data[pos+2] !== targetColor.b) continue;
-
+                const [x, y] = stack.pop(), pos = (y * GRID_SIZE + x) * 4;
+                if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE || data[pos] !== targetColor.r || data[pos+1] !== targetColor.g || data[pos+2] !== targetColor.b) continue;
                 data[pos] = fr; data[pos+1] = fg; data[pos+2] = fb; data[pos+3] = 255;
                 stack.push([x+1, y], [x-1, y], [x, y+1], [x, y-1]);
             }
             mainCtx.putImageData(imgData, 0, 0);
         }
+        function getPixelColor(data, x, y) { const pos = (y * GRID_SIZE + x) * 4; return { r: data[pos], g: data[pos+1], b: data[pos+2] }; }
+        function saveState() { history.push(mainCtx.getImageData(0, 0, GRID_SIZE, GRID_SIZE)); if (history.length > 20) history.shift(); }
+        function undo() { if (history.length > 0) { mainCtx.putImageData(history.pop(), 0, 0); } }
 
-        function getPixelColor(data, x, y) {
-            const pos = (y * GRID_SIZE + x) * 4;
-            return { r: data[pos], g: data[pos+1], b: data[pos+2] };
-        }
-
-        function saveState() {
-            history.push(mainCtx.getImageData(0, 0, GRID_SIZE, GRID_SIZE));
-            if (history.length > 20) history.shift();
-        }
-        function undo() {
-            if (history.length > 0) {
-                const lastState = history.pop();
-                mainCtx.putImageData(lastState, 0, 0);
-            }
-        }
-        
-        /* --- 文字排版：高阻力滑動位移 --- */
+        /* --- 文字排版高精度位移 --- */
         function handleTextTouchStart(e) {
             e.preventDefault();
             if (e.touches.length === 1) {
-                textDrag.active = true;
-                textDrag.startX = e.touches[0].clientX;
-                textDrag.startY = e.touches[0].clientY;
-                textDrag.initialTextX = textX;
-                textDrag.initialTextY = textY;
+                textDrag.active = true; textDrag.startX = e.touches[0].clientX; textDrag.startY = e.touches[0].clientY;
+                textDrag.initialTextX = textX; textDrag.initialTextY = textY;
             }
         }
-
         function handleTextTouchMove(e) {
             e.preventDefault();
             if (textDrag.active && e.touches.length === 1) {
-                const dx = e.touches[0].clientX - textDrag.startX;
-                const dy = e.touches[0].clientY - textDrag.startY;
-
-                const rect = textPreviewCanvas.getBoundingClientRect();
-                const scaleX = rect.width / GRID_SIZE;
-                const scaleY = rect.height / GRID_SIZE;
-
-                // 阻力係數：數值越大，需要的物理滑動距離越長
-                const dragResistance = 4;
-
-                const logicalDx = Math.round(dx / (scaleX * dragResistance));
-                const logicalDy = Math.round(dy / (scaleY * dragResistance));
-
-                if (logicalDx !== 0 || logicalDy !== 0) {
-                    textX = textDrag.initialTextX + logicalDx;
-                    textY = textDrag.initialTextY + logicalDy;
-                    previewText();
-                }
+                const rect = textPreviewCanvas.getBoundingClientRect(), scaleX = rect.width / GRID_SIZE, scaleY = rect.height / GRID_SIZE, dragRes = 4;
+                const dx = Math.round((e.touches[0].clientX - textDrag.startX) / (scaleX * dragRes)), dy = Math.round((e.touches[0].clientY - textDrag.startY) / (scaleY * dragRes));
+                if (dx !== 0 || dy !== 0) { textX = textDrag.initialTextX + dx; textY = textDrag.initialTextY + dy; previewText(); }
             }
         }
-
-        function handleTextTouchEnd(e) {
-            e.preventDefault();
-            textDrag.active = false;
-        }
+        function handleTextTouchEnd(e) { e.preventDefault(); textDrag.active = false; }
 
         function previewText() {
-            const text = document.getElementById('textInput').value;
-            const size = document.getElementById('fontSize').value;
-            
-            textPreviewCtx.fillStyle = '#FFFFFF';
-            textPreviewCtx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
-            textPreviewCtx.font = `${size}px 'Bakudai-Regular', sans-serif`;
-            textPreviewCtx.fillStyle = '#000000';
-            textPreviewCtx.textAlign = 'center';
-            textPreviewCtx.textBaseline = 'top';
+            const text = document.getElementById('textInput').value, size = document.getElementById('fontSize').value;
+            textPreviewCtx.fillStyle = '#FFFFFF'; textPreviewCtx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
+            textPreviewCtx.font = `${size}px 'Bakudai-Regular', sans-serif`; textPreviewCtx.fillStyle = '#000000'; textPreviewCtx.textAlign = 'center'; textPreviewCtx.textBaseline = 'top';
             textPreviewCtx.fillText(text, textX, textY);
-
             const imgData = textPreviewCtx.getImageData(0, 0, GRID_SIZE, GRID_SIZE);
             for(let i=0; i<imgData.data.length; i+=4) {
-                const r = imgData.data[i];
-                const alpha = imgData.data[i+3];
-                const isWhite = (alpha < 128) || (r >= 200); 
-
-                if (isWhite) {
-                    imgData.data[i] = 255; imgData.data[i+1] = 255; imgData.data[i+2] = 255; imgData.data[i+3] = 255;
-                } else {
-                    imgData.data[i] = 0; imgData.data[i+1] = 0; imgData.data[i+2] = 0; imgData.data[i+3] = 255;
-                }
+                const isWhite = (imgData.data[i+3] < 128) || (imgData.data[i] >= 200); 
+                if (isWhite) { imgData.data[i] = 255; imgData.data[i+1] = 255; imgData.data[i+2] = 255; imgData.data[i+3] = 255; } 
+                else { imgData.data[i] = 0; imgData.data[i+1] = 0; imgData.data[i+2] = 0; imgData.data[i+3] = 255; }
             }
             textPreviewCtx.putImageData(imgData, 0, 0);
-
             textPreviewCtx.fillStyle = 'rgba(0,0,0,0.1)';
-            for (let i = 0; i < GRID_SIZE; i++) {
-                for (let j = 0; j < GRID_SIZE; j++) {
-                    if ((i + j) % 2 === 0) textPreviewCtx.fillRect(i, j, 1, 1);
-                }
-            }
+            for (let i = 0; i < GRID_SIZE; i++) { for (let j = 0; j < GRID_SIZE; j++) { if ((i + j) % 2 === 0) textPreviewCtx.fillRect(i, j, 1, 1); } }
         }
 
         function applyText() {
             saveState();
-            const text = document.getElementById('textInput').value;
-            const size = document.getElementById('fontSize').value;
-            
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = GRID_SIZE; tempCanvas.height = GRID_SIZE;
-            const tCtx = tempCanvas.getContext('2d');
-            
-            tCtx.fillStyle = 'white'; tCtx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
-            tCtx.font = `${size}px 'Bakudai-Regular', sans-serif`;
-            tCtx.fillStyle = 'black';
-            tCtx.textAlign = 'center'; tCtx.textBaseline = 'top';
+            const text = document.getElementById('textInput').value, size = document.getElementById('fontSize').value;
+            const tempCanvas = document.createElement('canvas'); tempCanvas.width = GRID_SIZE; tempCanvas.height = GRID_SIZE; const tCtx = tempCanvas.getContext('2d');
+            tCtx.fillStyle = 'white'; tCtx.fillRect(0, 0, GRID_SIZE, GRID_SIZE); tCtx.font = `${size}px 'Bakudai-Regular', sans-serif`; tCtx.fillStyle = 'black'; tCtx.textAlign = 'center'; tCtx.textBaseline = 'top';
             tCtx.fillText(text, textX, textY);
-
             const imgData = tCtx.getImageData(0, 0, GRID_SIZE, GRID_SIZE);
             for(let i=0; i<imgData.data.length; i+=4) {
-                const r = imgData.data[i];
-                const alpha = imgData.data[i+3];
-                const isWhite = (alpha < 128) || (r >= 200); 
-
+                const isWhite = (imgData.data[i+3] < 128) || (imgData.data[i] >= 200); 
                 lockedMask[i/4] = isWhite; 
-                if (isWhite) {
-                    imgData.data[i] = 255; imgData.data[i+1] = 255; imgData.data[i+2] = 255; imgData.data[i+3] = 255;
-                } else {
-                    imgData.data[i] = 0; imgData.data[i+1] = 0; imgData.data[i+2] = 0; imgData.data[i+3] = 255;
-                }
+                if (isWhite) { imgData.data[i] = 255; imgData.data[i+1] = 255; imgData.data[i+2] = 255; imgData.data[i+3] = 255; } 
+                else { imgData.data[i] = 0; imgData.data[i+1] = 0; imgData.data[i+2] = 0; imgData.data[i+3] = 255; }
             }
             mainCtx.putImageData(imgData, 0, 0);
             
-            // 套用後若是系統有字，自動標記完成並切換到下一字
-            if (seqData.length > 0) {
-                document.getElementById('doneSwitch').checked = true;
-                toggleDone();
-                nextChar();
-            }
-            
+            if (seqData.length > 0) { document.getElementById('doneSwitch').checked = true; toggleDone(); nextChar(); }
             switchTab('drawTab', document.querySelectorAll('.segment-btn')[0]);
         }
 
         function saveImage() {
-            const link = document.createElement('a');
-            // 檔名使用文字本身
             const fileName = document.getElementById('textInput').value || 'pixel';
-            link.download = `${fileName}.png`;
-            link.href = mainCanvas.toDataURL('image/png');
-            link.click();
+            const link = document.createElement('a'); link.download = `${fileName}.png`; link.href = mainCanvas.toDataURL('image/png'); link.click();
         }
 
-        window.onload = () => {
-            init();
-            document.fonts.ready.then(() => previewText());
-        };
+        window.onload = () => { init(); document.fonts.ready.then(() => previewText()); };
     </script>
 </body>
 </html>
